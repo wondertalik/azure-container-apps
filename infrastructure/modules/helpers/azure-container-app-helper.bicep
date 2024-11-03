@@ -65,16 +65,6 @@ resource conatainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             weight: 100
           }
         ]
-        // Only add customDomains if optiLeadsEmailsApiManagedCertificateName is not empty
-        //     customDomains: !empty(optiLeadsEmailsApiCertificateName)
-        //       ? [
-        //           {
-        //             name: optiLeadsEmailsApiCustomUrl
-        //             certificateId: optiLeadsEmailsApiCertificate.id
-        //             bindingType: 'SniEnabled'
-        //           }
-        //         ]
-        //       : null
       }
       registries: [
         {
