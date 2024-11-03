@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Example.FunctionApp1", "src\Example.FunctionApp1\Example.FunctionApp1.csproj", "{CC335E32-C168-436B-A3A0-CA50C5535931}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CC335E32-C168-436B-A3A0-CA50C5535931}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC335E32-C168-436B-A3A0-CA50C5535931}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC335E32-C168-436B-A3A0-CA50C5535931}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC335E32-C168-436B-A3A0-CA50C5535931}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

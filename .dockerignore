@@ -1,0 +1,20 @@
+# Ignore user-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Ignore Rider project files
+.idea/
+*.iml
+
+# Ignore local settings
+local.settings.json
+
+# Ignore other unnecessary files
+.vscode/
+.git/
+.gitignore
+Dockerfile
+.dockerignore
+.Ds_Store
