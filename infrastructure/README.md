@@ -54,8 +54,9 @@ az deployment sub what-if --location $location \
    projectName=$projectName \
    targetEnvironment=$targetenv \
    azureContainerRegistryName='myexampleacrtst' \
-   azureContainerRegistryResourceGroupName='rg-my-example-acr'
-
+   azureContainerRegistryResourceGroupName='rg-my-example-acr' \
+   httpApiContainerAppName='my-httpapi' \
+   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release'
 
 az deployment sub create --location $location \
  --template-file ./main.bicep \
@@ -66,7 +67,9 @@ az deployment sub create --location $location \
    projectName=$projectName \
    targetEnvironment=$targetenv \
    azureContainerRegistryName='myexampleacrtst' \
-   azureContainerRegistryResourceGroupName='rg-my-example-acr'
+   azureContainerRegistryResourceGroupName='rg-my-example-acr' \
+   httpApiContainerAppName='my-httpapi' \
+   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release'
 ```
 
 ## Additional Resources

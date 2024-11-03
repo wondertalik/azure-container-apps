@@ -111,4 +111,4 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-
   }
 }
 
-output containerAppsEnvName string = containerAppsEnvironment.name
+output containerAppsEnvironmentName string = containerAppsEnvironment.name

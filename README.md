@@ -151,7 +151,7 @@ docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CO
 - build HttpApi image
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.5-release -f src/HttpApi/Dockerfile .
+docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release -f src/HttpApi/Dockerfile .
 ```
 
 ### Run to check is everything works with containers

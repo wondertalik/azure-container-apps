@@ -29,6 +29,12 @@ param azureContainerRegistryName string
 @description('Azure Container Registry restore group name')
 param azureContainerRegistryResourceGroupName string
 
+@description('Image name of the container app')
+param httpApiContainerAppName string
+
+@description('Full image name of the container app')
+param httpApiContainerAppImage string
+
 targetScope = 'subscription'
 
 module applicationResourceGroup './modules/resource-group.bicep' = {
@@ -116,3 +122,20 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
 //   scope: az.resourceGroup(applicationResourceGroup.name)
 //   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
 // }
+
+module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = {
+  name: 'httpApiContainerApp'
+  params: {
+    location: location
+    projectName: projectName
+    alias: 'HttpApi'
+    targetEnvironment: targetEnvironment
+    containerAppsEnvironmentName: applicationContainerAppsEnvironment.outputs.containerAppsEnvironmentName
+    userAssignedIdentityName: userAssignIdentity.outputs.identityName
+    azureContainerRegistryName: azureContainerRegistryName
+    containerAppName: httpApiContainerAppName
+    containerAppImage: httpApiContainerAppImage
+  }
+  scope: az.resourceGroup(applicationResourceGroup.name)
+  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
+}

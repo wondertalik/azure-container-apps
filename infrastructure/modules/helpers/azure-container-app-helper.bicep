@@ -82,6 +82,57 @@ resource conatainerApp 'Microsoft.App/containerApps@2024-03-01' = {
             cpu: json('0.5')
             memory: '1Gi'
           }
+          probes: [
+            {
+              type: 'Liveness'
+              failureThreshold: 3
+              periodSeconds: 10
+              initialDelaySeconds: 7
+              httpGet: {
+                path: '/healthz'
+                port: 8080
+                scheme: 'HTTP'
+                httpHeaders: [
+                  {
+                    name: 'Custom-Header'
+                    value: 'liveness probe'
+                  }
+                ]
+              }
+            }
+            {
+              type: 'Readiness'
+              failureThreshold: 3
+              initialDelaySeconds: 10
+              httpGet: {
+                path: '/healthz'
+                port: 8080
+                scheme: 'HTTP'
+                httpHeaders: [
+                  {
+                    name: 'Custom-Header'
+                    value: 'readiness probe'
+                  }
+                ]
+              }
+            }
+            {
+              type: 'Startup'
+              initialDelaySeconds: 3
+              periodSeconds: 3
+              httpGet: {
+                path: '/healthz'
+                port: 8080
+                scheme: 'HTTP'
+                httpHeaders: [
+                  {
+                    name: 'Custom-Header'
+                    value: 'startup probe'
+                  }
+                ]
+              }
+            }
+          ]
         }
       ]
       scale: {
