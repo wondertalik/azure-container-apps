@@ -96,7 +96,6 @@ resource azfunctionapp 'Microsoft.Web/sites@2023-12-01' = {
       cpu: json('0.5')
       memory: '1Gi'
     }
-    
     siteConfig: {
       acrUseManagedIdentityCreds: true
       acrUserManagedIdentityID: identity.id

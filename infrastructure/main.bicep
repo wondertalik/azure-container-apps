@@ -105,23 +105,23 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
   dependsOn: [applicationResourceGroup]
 }
 
-// module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = {
-//   name: 'functionApp1'
-//   params: {
-//     location: location
-//     applicationInsightsName: telemetry.outputs.applicationInsightsName
-//     azureFunctionName: 'app1'
-//     containerAppsEnvironmentName: applicationContainerAppsEnvironment.name
-//     projectName: projectName
-//     targetEnvironment: targetEnvironment
-//     userAssignedIdentityName: userAssignIdentity.outputs.identityName
-//     keyVaultName: keyVault.outputs.keyVaultName
-//     azureContainerRegistryName: azureContainerRegistryName
-//     alias: 'Example.FunctionApp1'
-//   }
-//   scope: az.resourceGroup(applicationResourceGroup.name)
-//   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
-// }
+module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = {
+  name: 'functionApp1'
+  params: {
+    location: location
+    applicationInsightsName: telemetry.outputs.applicationInsightsName
+    azureFunctionName: 'app1'
+    containerAppsEnvironmentName: applicationContainerAppsEnvironment.name
+    projectName: projectName
+    targetEnvironment: targetEnvironment
+    userAssignedIdentityName: userAssignIdentity.outputs.identityName
+    keyVaultName: keyVault.outputs.keyVaultName
+    azureContainerRegistryName: azureContainerRegistryName
+    alias: 'Example.FunctionApp1'
+  }
+  scope: az.resourceGroup(applicationResourceGroup.name)
+  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
+}
 
 module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = {
   name: 'httpApiContainerApp'
