@@ -111,7 +111,7 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     location: location
     applicationInsightsName: telemetry.outputs.applicationInsightsName
     azureFunctionName: 'app1'
-    containerAppsEnvironmentName: applicationContainerAppsEnvironment.name
+    containerAppsEnvironmentName: applicationContainerAppsEnvironment.outputs.containerAppsEnvironmentName
     projectName: projectName
     targetEnvironment: targetEnvironment
     userAssignedIdentityName: userAssignIdentity.outputs.identityName
