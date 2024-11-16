@@ -1,15 +1,26 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS installer-env
+# This stage is used when running from VS in fast mode (Default for Debug configuration)
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0 AS base
+WORKDIR /home/site/wwwroot
+EXPOSE 8080
 
-COPY ./src/Example.FunctionApp1 /src/Example.FunctionApp1
-RUN cd /src/Example.FunctionApp1 && \
-mkdir -p /home/site/wwwroot && \
-dotnet publish Example.FunctionApp1.csproj --output /home/site/wwwroot
+# This stage is used to build the service project
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+ARG BUILD_CONFIGURATION=Release
+WORKDIR /src
+COPY ["./src/Example.FunctionApp1/Example.FunctionApp1.csproj", "Example.FunctionApp1/"]
+RUN dotnet restore "./Example.FunctionApp1/Example.FunctionApp1.csproj"
+COPY ./src .
+WORKDIR "/src/Example.FunctionApp1"
+RUN dotnet build "./Example.FunctionApp1.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# To enable ssh & remote debugging on app service change the base image to the one below
-# FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0-appservice
-FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4-dotnet-isolated8.0
-USER $APP_UID
+# This stage is used to publish the service project to be copied to the final stage
+FROM build AS publish
+ARG BUILD_CONFIGURATION=Release
+RUN dotnet publish "./Example.FunctionApp1.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+
+# This stage is used in production or when running from VS in regular mode (Default when not using the Debug configuration)
+FROM base AS final
+WORKDIR /home/site/wwwroot
+COPY --from=publish /app/publish .
 ENV AzureWebJobsScriptRoot=/home/site/wwwroot \
     AzureFunctionsJobHost__Logging__Console__IsEnabled=true
-
-COPY --from=installer-env ["/home/site/wwwroot", "/home/site/wwwroot"]
