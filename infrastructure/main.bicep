@@ -30,10 +30,13 @@ param azureContainerRegistryName string
 param azureContainerRegistryResourceGroupName string
 
 @description('Image name of the container app')
-param httpApiContainerAppName string
+param httpApiContainerAppName string = ''
 
 @description('Full image name of the container app')
-param httpApiContainerAppImage string
+param httpApiContainerAppImage string = ''
+
+@description('Full image name of the container app')
+param enableHttpApiContainerAppImage bool = false
 
 targetScope = 'subscription'
 
@@ -117,13 +120,13 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     userAssignedIdentityName: userAssignIdentity.outputs.identityName
     keyVaultName: keyVault.outputs.keyVaultName
     azureContainerRegistryName: azureContainerRegistryName
-    alias: 'Example.FunctionApp1'
+    alias: 'FunctionApp1'
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
 }
 
-module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = {
+module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = if (enableHttpApiContainerAppImage) {
   name: 'httpApiContainerApp'
   params: {
     location: location

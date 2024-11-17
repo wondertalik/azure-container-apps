@@ -97,17 +97,18 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-
       infrastructureSubnetId: vnet.properties.subnets[0].id
     }
     publicNetworkAccess: 'Enabled'
-    openTelemetryConfiguration: {
-      tracesConfiguration: {
-        destinations: ['appInsights']
-      }
-      logsConfiguration: {
-        destinations: ['appInsights']
-      }
-    }
+    openTelemetryConfiguration: null
     appInsightsConfiguration: {
       connectionString: applicationInsights.properties.InstrumentationKey
     }
+  }
+}
+
+resource dotNetComponent 'Microsoft.App/managedEnvironments/dotNetComponents@2024-08-02-preview' = {
+  name: 'aspire-dashboard'
+  parent: containerAppsEnvironment
+  properties: {
+    componentType: 'AspireDashboard'
   }
 }
 

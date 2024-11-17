@@ -74,7 +74,7 @@ resource azStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 var azStorageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${azStorageAccount.name};EndpointSuffix=${az.environment().suffixes.storage};AccountKey=${azStorageAccount.listKeys().keys[0].value}'
 
 var functionAppName = 'func-${azureFunctionName}-${projectName}-${targetEnvironment}'
-resource azfunctionapp 'Microsoft.Web/sites@2023-12-01' = {
+resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux,container,azurecontainerapps'
@@ -101,7 +101,7 @@ resource azfunctionapp 'Microsoft.Web/sites@2023-12-01' = {
       acrUserManagedIdentityID: identity.id
       minimumElasticInstanceCount: minimumElasticInstanceCount
       functionAppScaleLimit: functionAppScaleLimit
-      linuxFxVersion: 'Docker|mcr.microsoft.com/azure-functions/dotnet7-quickstart-demo:1.0'
+      linuxFxVersion: 'Docker|mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
