@@ -14,6 +14,6 @@ services:
       - ASPNETCORE_Kestrel__Certificates__Default__KeyPath=/usr/local/share/ssl/${HTTPS_CERT_NAME_KEY}
       - OTEL_SERVICE_NAME=${HTTPAPI_OLTP_NAME}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
-      - OTEL_EXPORTER_OTLP_HEADERS=x-otlp-api-key=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
+      - OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS:-}
     networks:
       - my_func_net
