@@ -1,6 +1,15 @@
+using OpenTelemetry;
+using Shared.Observability;
+
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
+builder.Logging.AddOpenTelemetryLogsInstrumentation(builder.Configuration);
+builder.Services
+    .AddOpenTelemetryMetricsInstrumentation(builder.Configuration, otel)
+    .AddOpenTelemetryTracingInstrumentation(builder.Configuration, otel)
+    .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

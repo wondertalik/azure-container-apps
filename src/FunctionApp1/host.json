@@ -4,7 +4,7 @@
     "applicationInsights": {
       "samplingSettings": {
         "isEnabled": true,
-        "maxTelemetryItemsPerSecond" : 20,
+        "maxTelemetryItemsPerSecond": 20,
         "excludedTypes": "Request"
       },
       "enableLiveMetricsFilters": true
@@ -15,5 +15,6 @@
       "Function": "Information",
       "Host.Aggregator": "Trace"
     }
-  }
+  },
+  "telemetryMode": "OpenTelemetry"
 }

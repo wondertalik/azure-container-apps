@@ -24,6 +24,8 @@ ARG BUILD_CONFIGURATION=Release
 WORKDIR /app
 
 COPY ["src/HttpApi/HttpApi.csproj", "src/HttpApi/"]
+COPY ["./src/Shared.Observability/Shared.Observability.csproj", "Shared.Observability/"]
+
 RUN dotnet restore "src/HttpApi/HttpApi.csproj"
 COPY . .
 WORKDIR "/app/src/HttpApi"

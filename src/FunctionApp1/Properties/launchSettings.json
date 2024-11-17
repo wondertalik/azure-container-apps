@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "Example.FunctionApp1": {
+    "FunctionApp1": {
       "commandName": "Project",
       "commandLineArgs": "--port 7263"
     },
