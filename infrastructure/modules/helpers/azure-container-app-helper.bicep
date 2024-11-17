@@ -36,7 +36,7 @@ resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' 
   name: userAssignedIdentityName
 }
 
-resource conatainerApp 'Microsoft.App/containerApps@2024-03-01' = {
+resource conatainerApp 'Microsoft.App/containerApps@2024-08-02-preview' = {
   name: 'ca-${containerAppName}-${projectName}-${targetEnvironment}' // 32 symbols 
   location: location
   tags: {
@@ -55,6 +55,11 @@ resource conatainerApp 'Microsoft.App/containerApps@2024-03-01' = {
     managedEnvironmentId: containerAppsEnvironment.id
     workloadProfileName: 'Consumption'
     configuration: {
+      runtime: {
+        dotnet: {
+          autoConfigureDataProtection: true
+        }
+      }
       ingress: {
         targetPort: containerAppTargetPort
         external: true
