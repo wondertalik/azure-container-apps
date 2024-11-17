@@ -18,18 +18,23 @@ HTTPS_CERT_NAME_CRT=dev4.crt
 HTTPS_CERT_NAME_KEY=dev4.key
 DOTNET_ENVIRONMENT=Development
 
-EXAMPLE_FUNCION_APP1_IMAGE=
-EXAMPLE_FUNCION_APP1_HTTP_PORT=7099
-EXAMPLE_FUNCION_APP1_OLTP_APP_NAME=example-funcion-app1
+FUNCTION_APP1_IMAGE=myexampleacrtst.azurecr.io/my-func-tst:2.0.8-release
+FUNCTION_APP1_HTTP_PORT=7263
+FUNCTION_APP1_OLTP_NAME=FunctionApp1
 
-HTTPAPI_IMAGE=
+HTTPAPI_IMAGE=myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release
 HTTPAPI_HTTP_PORT=5238
 HTTPAPI_HTTPS_PORT=7125
+HTTPAPI_OLTP_NAME=HttpApi
 
-AZURITE_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
+AZURITE_CONNECTION_STRING=
+APPLICATIONINSIGHTS_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
 
 # observability
 ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=myprimaryapikey
+#aspire dashboard
+OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+OTEL_EXPORTER_OTLP_HEADERS=x-otlp-api-key=myprimaryapikey
 ```
 
 ### Run during development
@@ -51,13 +56,13 @@ From a root directory of project run commands:
 - run all services (azurite, aspire-dashboard)
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-func-tst up --build --remove-orphans
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
 ```
 
 - stop and remove all services
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-func-tst down
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps down
 ```
 
 ### Self-signed certificate
@@ -142,16 +147,16 @@ az login
 az acr login -n myexampleacrtst
 ```
 
-- build Example.FunctionApp1 image
+- build FunctionApp1 image
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:0.0.2-release -f src/Example.FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.8-release -f src/FunctionApp1/Dockerfile .
 ```
 
 - build HttpApi image
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release -f src/HttpApi/Dockerfile .
+docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release -f src/HttpApi/Dockerfile .
 ```
 
 ### Run to check is everything works with containers

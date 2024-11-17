@@ -68,8 +68,9 @@ az deployment sub create --location $location \
    targetEnvironment=$targetenv \
    azureContainerRegistryName='myexampleacrtst' \
    azureContainerRegistryResourceGroupName='rg-my-example-acr' \
+   enableHttpApiContainerAppImage=true \
    httpApiContainerAppName='my-httpapi' \
-   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release'
+   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release'
 ```
 
 ## Additional Resources
