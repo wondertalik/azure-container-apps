@@ -27,13 +27,13 @@ param azureContainerRegistryResourceGroupName string
 param httpApiContainerAppName string = ''
 
 @description('Full image name of the container app')
-param httpApiContainerAppImage string = ''
+param httpApiContainerAppImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
 @description('Enable http api container app')
 param enableHttpApiContainerAppImage bool = false
 
 @description('Full image name of the container app')
-param azureFunctionContainerAppImage string = ''
+param azureFunctionContainerAppImage string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
 
 @description('Enable azure function container app')
 param enableAzureFunctionContainerAppImage bool = false

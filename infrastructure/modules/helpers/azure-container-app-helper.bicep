@@ -23,7 +23,7 @@ param azureContainerRegistryName string
 param containerAppName string
 
 @description('Full image name of the container app')
-param containerAppImage string
+param containerAppImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
 @description('Target port of the container app')
 param containerAppTargetPort int = 8080
