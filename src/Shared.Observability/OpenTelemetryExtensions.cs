@@ -100,7 +100,24 @@ public static class OpenTelemetryExtensions
                     return !excludeEvent;
                 };
             });
-            tracing.AddHttpClientInstrumentation();
+            tracing.AddHttpClientInstrumentation(options =>
+            {
+                options.FilterHttpRequestMessage = message =>
+                {
+                    //filter azure noising traces
+                    bool excludeLiveDiagnosticsEvent =
+                        message.RequestUri?.Host.Contains(".livediagnostics.monitor.azure.com") ?? false;
+                    if (excludeLiveDiagnosticsEvent)
+                        return false;
+    
+                    bool excludeApplicationInsightsEvent =
+                        message.RequestUri?.Host.Contains("applicationinsights.azure.com") ?? false;
+                    if (excludeApplicationInsightsEvent)
+                        return false;
+    
+                    return true;
+                };
+            });
 
             configureTracerProviderBuilder?.Invoke(tracing);
 
