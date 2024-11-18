@@ -104,8 +104,12 @@ resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
       linuxFxVersion: 'Docker|mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
       appSettings: [
         {
-          name: 'AzureWebJobsStorage'
-          value: azStorageConnectionString
+          name: 'AzureWebJobsStorage__accountName'
+          value: azStorageAccount.name
+        }
+        {
+          name: 'AzureWebJobsStorage__credential'
+          value: 'managedidentity'
         }
         {
           name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
@@ -125,6 +129,16 @@ resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
         }
       ]
     }
+  }
+}
+
+resource roleAssignmenStorageBlobDataOwner 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(azStorageAccount.name, 'Storage Blob Data Owner User Function App')
+  scope: azStorageAccount
+  properties: {
+    principalId: azfunctionapp.identity.principalId
+    principalType: 'ServicePrincipal'
+    roleDefinitionId: resourceId('Microsoft.Authorization/roleDefinitions', 'b7e6dc6d-f1e8-4753-8033-0f276bb0955b')
   }
 }
 
