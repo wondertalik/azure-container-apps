@@ -150,13 +150,13 @@ az acr login -n myexampleacrtst
 - build FunctionApp1 image
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.8-release -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release -f src/FunctionApp1/Dockerfile .
 ```
 
 - build HttpApi image
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release -f src/HttpApi/Dockerfile .
+docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release -f src/HttpApi/Dockerfile .
 ```
 
 ### Run to check is everything works with containers

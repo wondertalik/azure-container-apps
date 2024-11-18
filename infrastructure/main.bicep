@@ -14,12 +14,6 @@ param location string
 @description('Name of the project related resources')
 param projectName string
 
-@allowed([
-  'dev'
-  'tst'
-  'uat'
-  'prd'
-])
 @description('Target environment')
 param targetEnvironment string
 
@@ -35,8 +29,14 @@ param httpApiContainerAppName string = ''
 @description('Full image name of the container app')
 param httpApiContainerAppImage string = ''
 
-@description('Full image name of the container app')
+@description('Enable http api container app')
 param enableHttpApiContainerAppImage bool = false
+
+@description('Full image name of the container app')
+param azureFunctionContainerAppImage string = ''
+
+@description('Enable azure function container app')
+param enableAzureFunctionContainerAppImage bool = false
 
 targetScope = 'subscription'
 
@@ -108,7 +108,7 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
   dependsOn: [applicationResourceGroup]
 }
 
-module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = {
+module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableAzureFunctionContainerAppImage) {
   name: 'functionApp1'
   params: {
     location: location
@@ -121,6 +121,7 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     keyVaultName: keyVault.outputs.keyVaultName
     azureContainerRegistryName: azureContainerRegistryName
     alias: 'FunctionApp1'
+    azureFunctionContainerAppImage: azureFunctionContainerAppImage
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]

@@ -55,8 +55,11 @@ az deployment sub what-if --location $location \
    targetEnvironment=$targetenv \
    azureContainerRegistryName='myexampleacrtst' \
    azureContainerRegistryResourceGroupName='rg-my-example-acr' \
+   enableHttpApiContainerAppImage=true \
    httpApiContainerAppName='my-httpapi' \
-   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:0.0.7-release'
+   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
+   enableAzureFunctionContainerAppImage=true \
+   azureFunctionContainerAppImage='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release'
 
 az deployment sub create --location $location \
  --template-file ./main.bicep \
@@ -70,7 +73,9 @@ az deployment sub create --location $location \
    azureContainerRegistryResourceGroupName='rg-my-example-acr' \
    enableHttpApiContainerAppImage=true \
    httpApiContainerAppName='my-httpapi' \
-   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release'
+   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
+   enableAzureFunctionContainerAppImage=true \
+   azureFunctionContainerAppImage='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release'
 ```
 
 ## Additional Resources

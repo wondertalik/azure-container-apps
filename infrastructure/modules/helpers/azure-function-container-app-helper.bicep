@@ -28,6 +28,9 @@ param keyVaultName string
 @description('Id of the user assigned id resource')
 param azureContainerRegistryName string
 
+@description('Full image name of the azure function app')
+param azureFunctionContainerAppImage string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
+
 @description('Minimum number of instances that the function app can scale in to')
 param minimumElasticInstanceCount int = 0
 
@@ -71,8 +74,6 @@ resource azStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
   }
 }
 
-var azStorageConnectionString = 'DefaultEndpointsProtocol=https;AccountName=${azStorageAccount.name};EndpointSuffix=${az.environment().suffixes.storage};AccountKey=${azStorageAccount.listKeys().keys[0].value}'
-
 var functionAppName = 'func-${azureFunctionName}-${projectName}-${targetEnvironment}'
 resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
   name: functionAppName
@@ -101,7 +102,7 @@ resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
       acrUserManagedIdentityID: identity.id
       minimumElasticInstanceCount: minimumElasticInstanceCount
       functionAppScaleLimit: functionAppScaleLimit
-      linuxFxVersion: 'Docker|mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
+      linuxFxVersion: 'Docker|${azureFunctionContainerAppImage}'
       appSettings: [
         {
           name: 'AzureWebJobsStorage__accountName'
