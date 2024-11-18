@@ -6,22 +6,32 @@ using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Shared.Observability.Options;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 
 namespace Shared.Observability;
 
 public static class OpenTelemetryExtensions
 {
-    // public static IServiceCollection AddAzureMonitor(this IServiceCollection services,
-    //     IConfiguration configuration, OpenTelemetryBuilder otel)
-    // {
-    //     string? azureMonitorConnectionString = configuration.GetValue<string>("AzureMonitor:ConnectionString");
-    //     if (!string.IsNullOrWhiteSpace(azureMonitorConnectionString))
-    //     {
-    //         otel.UseAzureMonitor();
-    //     }
-    //
-    //     return services;
-    // }
+    public static IServiceCollection AddAzureMonitor(this IServiceCollection services,
+        IConfiguration configuration, OpenTelemetryBuilder otel,
+        Action<AzureMonitorOptions>? azureMonitorOptions = null)
+    {
+        string? azureMonitorConnectionString = configuration.GetValue<string>("AzureMonitor:ConnectionString") ??
+                                               configuration.GetValue<string>("APPLICATIONINSIGHTS_CONNECTION_STRING");
+        switch (string.IsNullOrWhiteSpace(azureMonitorConnectionString))
+        {
+            case false:
+                services.Configure<AzureMonitorOptions>(configuration.GetSection("AzureMonitor"));
+                otel.UseAzureMonitor(options =>
+                {
+                    options.ConnectionString = azureMonitorConnectionString;
+                    azureMonitorOptions?.Invoke(options);
+                });
+                break;
+        }
+
+        return services;
+    }
 
 
     public static void AddOpenTelemetryLogsInstrumentation(this ILoggingBuilder builder,

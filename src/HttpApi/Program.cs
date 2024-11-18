@@ -7,6 +7,7 @@ WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
 builder.Logging.AddOpenTelemetryLogsInstrumentation(builder.Configuration);
 builder.Services
+    .AddAzureMonitor(builder.Configuration, otel)
     .AddOpenTelemetryMetricsInstrumentation(builder.Configuration, otel)
     .AddOpenTelemetryTracingInstrumentation(builder.Configuration, otel)
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
