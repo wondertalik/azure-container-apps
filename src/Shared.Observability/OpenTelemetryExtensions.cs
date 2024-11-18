@@ -85,7 +85,21 @@ public static class OpenTelemetryExtensions
             var otelOltpTracingOptions = configuration
                 .GetSection(OtelOltpTracingOptions.ConfigSectionName).Get<OtelOltpTracingOptions>();
 
-            tracing.AddAspNetCoreInstrumentation();
+            tracing.AddAspNetCoreInstrumentation(options =>
+            {
+                options.Filter = context =>
+                {
+                    var excludeSegments = new List<string>
+                    {
+                        "/metrics",
+                        "/favicon.ico",
+                        "/robots.txt",
+                        "/healthz"
+                    };
+                    bool excludeEvent = excludeSegments.Any(x => context.Request.Path.StartsWithSegments(x));
+                    return !excludeEvent;
+                };
+            });
             tracing.AddHttpClientInstrumentation();
 
             configureTracerProviderBuilder?.Invoke(tracing);
