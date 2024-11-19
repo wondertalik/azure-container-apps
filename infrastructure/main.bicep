@@ -23,6 +23,7 @@ param azureContainerRegistryName string
 @description('Azure Container Registry restore group name')
 param azureContainerRegistryResourceGroupName string
 
+// HttpApi
 @description('Image name of the container app')
 param httpApiContainerAppName string = ''
 
@@ -35,10 +36,17 @@ param httpApiContainerAppResourcesCpu string = '0.5'
 @description('Memory resources')
 param httpApiContainerAppResourcesMemory string = '1Gi'
 
-@description('Enable http api container app')
+@description('Enable HttpApi container app')
 param enableHttpApiContainerAppImage bool = false
 
-@description('Full image name of the container app')
+@description('HttpApi scale min replicas')
+param httpApiContainerAppScaleMinReplicas int = 0
+
+@description('HttpApi scale max replicas')
+param httpApiContainerAppScaleMaxReplicas int = 3
+
+// FunctionApp1
+@description('Full image name of the azure function container app')
 param functionApp1Image string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
 
 @description('CPU resources')
@@ -49,6 +57,12 @@ param functionApp1ResourcesMemory string = '1Gi'
 
 @description('Enable azure function container app')
 param enableFunctionApp1Image bool = false
+
+@description('Minimum number of instances that the function app can scale in to')
+param functionApp1MinimumElasticInstanceCount int = 0
+
+@description('Maximum number of instances that the function app can scale out to')
+param functionApp1ScaleLimit int = 3
 
 targetScope = 'subscription'
 
@@ -136,6 +150,8 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     azureFunctionContainerAppImage: functionApp1Image
     resourcesCpu: functionApp1ResourcesCpu
     resourcesMemory: functionApp1ResourcesMemory
+    minimumElasticInstanceCount: functionApp1MinimumElasticInstanceCount
+    functionAppScaleLimit: functionApp1ScaleLimit
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
@@ -155,6 +171,8 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
     containerAppImage: httpApiContainerAppImage
     resourcesCpu: httpApiContainerAppResourcesCpu
     resourcesMemory: httpApiContainerAppResourcesMemory
+    scaleMinReplicas: httpApiContainerAppScaleMinReplicas
+    scaleMaxReplicas: httpApiContainerAppScaleMaxReplicas
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]

@@ -38,10 +38,10 @@ param minimumElasticInstanceCount int = 0
 param functionAppScaleLimit int = 3
 
 @description('CPU resources')
-param resourcesCpu string = '0.5'
+param resourcesCpu string
 
 @description('Memory resources')
-param resourcesMemory string = '1Gi'
+param resourcesMemory string
 
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' existing = {
   name: containerAppsEnvironmentName

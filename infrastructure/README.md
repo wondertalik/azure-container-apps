@@ -58,8 +58,16 @@ az deployment sub what-if --location $location \
    enableHttpApiContainerAppImage=true \
    httpApiContainerAppName='my-httpapi' \
    httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
+   httpApiContainerAppScaleMinReplicas=0 \
+   httpApiContainerAppScaleMaxReplicas=1 \
+   httpApiContainerAppResourcesCpu=0.5 \
+   httpApiContainerAppResourcesMemory=1Gi \
    enableFunctionApp1Image=true \
-   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release'
+   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release' \
+   functionApp1MinimumElasticInstanceCount=0 \
+   functionApp1ScaleLimit=1 \
+   functionApp1ResourcesCpu=0.5 \
+   functionApp1ResourcesMemory=1Gi
 
 az deployment sub create --location $location \
  --template-file ./main.bicep \
@@ -74,8 +82,16 @@ az deployment sub create --location $location \
    enableHttpApiContainerAppImage=true \
    httpApiContainerAppName='my-httpapi' \
    httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
+   httpApiContainerAppScaleMinReplicas=0 \
+   httpApiContainerAppScaleMaxReplicas=1 \
+   httpApiContainerAppResourcesCpu=0.5 \
+   httpApiContainerAppResourcesMemory=1Gi \
    enableFunctionApp1Image=true \
-   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release'
+   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release' \
+   functionApp1MinimumElasticInstanceCount=0 \
+   functionApp1ScaleLimit=1 \
+   functionApp1ResourcesCpu=0.5 \
+   functionApp1ResourcesMemory=1Gi
 ```
 
 ## Additional Resources

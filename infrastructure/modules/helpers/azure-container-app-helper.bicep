@@ -29,10 +29,16 @@ param containerAppImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 param containerAppTargetPort int = 8080
 
 @description('CPU resources')
-param resourcesCpu string = '0.5'
+param resourcesCpu string
 
 @description('Memory resources')
-param resourcesMemory string = '1Gi'
+param resourcesMemory string
+
+@description('Scale min replicas')
+param scaleMinReplicas int = 0
+
+@description('Scale max replicas')
+param scaleMaxReplicas int = 3
 
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' existing = {
   name: containerAppsEnvironmentName
@@ -147,8 +153,8 @@ resource conatainerApp 'Microsoft.App/containerApps@2024-08-02-preview' = {
         }
       ]
       scale: {
-        minReplicas: 1
-        maxReplicas: 1
+        minReplicas: scaleMinReplicas
+        maxReplicas: scaleMaxReplicas
       }
     }
   }
