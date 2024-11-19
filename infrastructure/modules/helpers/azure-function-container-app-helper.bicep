@@ -37,6 +37,12 @@ param minimumElasticInstanceCount int = 0
 @description('Maximum number of instances that the function app can scale out to')
 param functionAppScaleLimit int = 3
 
+@description('CPU resources')
+param resourcesCpu string = '0.5'
+
+@description('Memory resources')
+param resourcesMemory string = '1Gi'
+
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' existing = {
   name: containerAppsEnvironmentName
 }
@@ -94,8 +100,8 @@ resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
   properties: {
     managedEnvironmentId: containerAppsEnvironment.id
     resourceConfig: {
-      cpu: json('0.5')
-      memory: '1Gi'
+      cpu: json(resourcesCpu)
+      memory: resourcesMemory
     }
     siteConfig: {
       acrUseManagedIdentityCreds: true

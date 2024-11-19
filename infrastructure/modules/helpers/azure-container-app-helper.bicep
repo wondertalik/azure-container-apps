@@ -28,6 +28,12 @@ param containerAppImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 @description('Target port of the container app')
 param containerAppTargetPort int = 8080
 
+@description('CPU resources')
+param resourcesCpu string = '0.5'
+
+@description('Memory resources')
+param resourcesMemory string = '1Gi'
+
 resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' existing = {
   name: containerAppsEnvironmentName
 }
@@ -84,8 +90,8 @@ resource conatainerApp 'Microsoft.App/containerApps@2024-08-02-preview' = {
           name: containerAppName
           image: containerAppImage
           resources: {
-            cpu: json('0.5')
-            memory: '1Gi'
+            cpu: json(resourcesCpu)
+            memory: resourcesMemory
           }
           probes: [
             {

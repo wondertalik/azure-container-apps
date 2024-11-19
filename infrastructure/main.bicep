@@ -29,14 +29,26 @@ param httpApiContainerAppName string = ''
 @description('Full image name of the container app')
 param httpApiContainerAppImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
 
+@description('CPU resources')
+param httpApiContainerAppResourcesCpu string = '0.5'
+
+@description('Memory resources')
+param httpApiContainerAppResourcesMemory string = '1Gi'
+
 @description('Enable http api container app')
 param enableHttpApiContainerAppImage bool = false
 
 @description('Full image name of the container app')
-param azureFunctionContainerAppImage string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
+param functionApp1Image string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
+
+@description('CPU resources')
+param functionApp1ResourcesCpu string = '0.5'
+
+@description('Memory resources')
+param functionApp1ResourcesMemory string = '1Gi'
 
 @description('Enable azure function container app')
-param enableAzureFunctionContainerAppImage bool = false
+param enableFunctionApp1Image bool = false
 
 targetScope = 'subscription'
 
@@ -108,7 +120,7 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
   dependsOn: [applicationResourceGroup]
 }
 
-module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableAzureFunctionContainerAppImage) {
+module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableFunctionApp1Image) {
   name: 'functionApp1'
   params: {
     location: location
@@ -121,7 +133,9 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     keyVaultName: keyVault.outputs.keyVaultName
     azureContainerRegistryName: azureContainerRegistryName
     alias: 'FunctionApp1'
-    azureFunctionContainerAppImage: azureFunctionContainerAppImage
+    azureFunctionContainerAppImage: functionApp1Image
+    resourcesCpu: functionApp1ResourcesCpu
+    resourcesMemory: functionApp1ResourcesMemory
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
@@ -139,6 +153,8 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
     azureContainerRegistryName: azureContainerRegistryName
     containerAppName: httpApiContainerAppName
     containerAppImage: httpApiContainerAppImage
+    resourcesCpu: httpApiContainerAppResourcesCpu
+    resourcesMemory: httpApiContainerAppResourcesMemory
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
