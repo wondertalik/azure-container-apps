@@ -97,7 +97,14 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-
       infrastructureSubnetId: vnet.properties.subnets[0].id
     }
     publicNetworkAccess: 'Enabled'
-    openTelemetryConfiguration: null
+    openTelemetryConfiguration: {
+      tracesConfiguration: {
+        destinations: ['appInsights']
+      }
+      logsConfiguration: {
+        destinations: ['appInsights']
+      }
+    }
     appInsightsConfiguration: {
       connectionString: applicationInsights.properties.InstrumentationKey
     }
