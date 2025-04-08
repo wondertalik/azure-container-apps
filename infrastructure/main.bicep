@@ -117,7 +117,6 @@ module azureContainerRegistry './modules/azure-container-registry.bicep' = {
     userIdentityResourceGroupName: applicationResourceGroup.name
   }
   scope: az.resourceGroup(azureContainerRegistryResourceGroupName)
-  dependsOn: [userAssignIdentity]
 }
 
 module applicationContainerAppsEnvironment './modules/azure-container-apps-environment.bicep' = {
@@ -131,7 +130,6 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
     namePrefix: '01'
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup]
 }
 
 module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableFunctionApp1Image) {
@@ -154,7 +152,6 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     functionAppScaleLimit: functionApp1ScaleLimit
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
 }
 
 module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = if (enableHttpApiContainerAppImage) {
@@ -175,5 +172,5 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
     scaleMaxReplicas: httpApiContainerAppScaleMaxReplicas
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
+  dependsOn: [keyVault]
 }
