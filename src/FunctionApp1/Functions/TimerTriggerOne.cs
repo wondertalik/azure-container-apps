@@ -1,7 +1,7 @@
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
-namespace FunctionApp1;
+namespace FunctionApp1.Functions;
 
 public class TimerTriggerOne(ILogger<TimerTriggerOne> logger)
 {

@@ -1,6 +1,59 @@
 services:
+  jaeger:
+    image: jaegertracing/jaeger:2.3.0
+    container_name: jaeger
+    ports:
+      - 6831:6831/udp
+      - 6832:6832/udp
+      - 5778:5778
+      - 16686:16686
+      - 43171:4317
+      - 43181:4318
+      - 14250:14250
+      - 14268:14268
+      - 14269:14269
+      - 9411:9411
+    networks:
+      - azure_container_apps_net
+  seq:
+    image: datalust/seq:latest
+    container_name: seq
+    environment:
+      ACCEPT_EULA: Y
+    volumes:
+      - ${VOLUMES_PATH}/seq/data:/data
+    #      - ./certs:/data/Certificates
+    ports:
+      - 5343:5341
+      - 5384:80
+      - 5385:443
+    networks:
+      - azure_container_apps_net
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.119.0
+    volumes:
+      - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
+      - ./certs/${HTTPS_CERT_NAME_CRT}:/var/otel/certs/dev.crt
+      - ./certs/${HTTPS_CERT_NAME_KEY}:/var/otel/certs/dev.key
+      - ./certs/${HTTPS_CERT_NAME_PEM}:/var/otel/certs/dev.pem
+    ports:
+      - 1888:1888 # pprof extension
+      - 8888:8888 # Prometheus metrics exposed by the Collector
+      - 8889:8889 # Prometheus exporter metrics
+      - 13133:13133 # health_check extension
+      - 4317:4317 # OTLP gRPC receiver
+      - 4318:4318 # OTLP http receiver
+      - 55679:55679 # zpages extension
+    environment:
+      - ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
+    depends_on:
+      - aspire-dashboard
+      - seq
+      - jaeger
+    networks:
+      - azure_container_apps_net
   aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.0
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.3
     ports:
       - 18888:18888
       - 18889:18889
@@ -13,6 +66,8 @@ services:
       - DASHBOARD__TELEMETRYLIMITS__MAXTRACECOUNT=150000
       - DASHBOARD__TELEMETRYLIMITS__MAXMETRICSCOUNT=100000
       - DASHBOARD__OTLP__CORS__ALLOWEDORIGINS=*
+    volumes:
+      - ${VOLUMES_PATH}/aspire-dashboard/DataProtection-Keys:/home/app/.aspnet/DataProtection-Keys
     networks:
-      - my_func_net
+      - azure_container_apps_net
   

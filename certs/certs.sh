@@ -2,6 +2,22 @@
 
 PARENT="dev4"
 
+# Array of DNS entries
+DNS_ENTRIES=(
+    "localhost"
+    "httpapi"
+)
+
+# Generate the DNS entries with proper numbering
+DNS_SECTION=""
+ORDER=1
+for DNS in "${DNS_ENTRIES[@]}"; do
+    DNS_SECTION+="DNS.${ORDER} = ${DNS}\n"
+    ((ORDER++))
+    DNS_SECTION+="DNS.${ORDER} = www.${DNS}\n"
+    ((ORDER++))
+done
+
 openssl req \
 -x509 \
 -newkey rsa:4096 \
@@ -24,11 +40,8 @@ openssl req \
   echo 'keyUsage = nonRepudiation, digitalSignature, keyEncipherment'; \
   echo 'subjectAltName = @alt_names'; \
   echo '[ alt_names ]'; \
-  echo "DNS.1 = www.localhost"; \
-  echo "DNS.2 = localhost"; \
-  echo "DNS.3 = www.httpapi"; \
-  echo "DNS.4 = httpapi"; \
-  echo '[ v3_ca ]'; \
+  echo -e "${DNS_SECTION}"; \
+  echo '[v3_ca]'; \
   echo 'subjectKeyIdentifier=hash'; \
   echo 'authorityKeyIdentifier=keyid:always,issuer'; \
   echo 'basicConstraints = critical, CA:TRUE, pathlen:0'; \
@@ -36,4 +49,4 @@ openssl req \
   echo 'extendedKeyUsage = serverAuth, clientAuth')
 
 openssl x509 -noout -text -in $PARENT.crt
-
+openssl x509 -in $PARENT.crt -out $PARENT.pem -outform PEM
