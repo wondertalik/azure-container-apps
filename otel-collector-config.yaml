@@ -45,11 +45,6 @@ exporters:
       insecure_skip_verify: true
     auth:
       authenticator: headers_setter
-  otlphttp/seq:
-    endpoint: http://seq/ingest/otlp
-    tls:
-      insecure: true
-      insecure_skip_verify: true
   # Data sources: metrics
   prometheusremotewrite:
     endpoint: http://prometheus:9090/api/v1/write
@@ -73,7 +68,7 @@ service:
     traces:
       receivers: [ otlp ]
       processors: [ batch ]
-      exporters: [ otlp/aspire-dashboard, otlphttp/seq, otlp/jaeger, debug ]
+      exporters: [ otlp/aspire-dashboard, otlp/jaeger, debug ]
     metrics:
       receivers: [ otlp ]
       processors: [ batch ]
@@ -81,4 +76,4 @@ service:
     logs:
       receivers: [ otlp ]
       processors: [ batch ]
-      exporters: [ otlp/aspire-dashboard, otlphttp/seq, debug ]
+      exporters: [ otlp/aspire-dashboard, debug ]

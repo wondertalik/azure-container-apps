@@ -1,4 +1,39 @@
 services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - cadvisor
+    networks:
+      - azure_container_apps_net
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - 8083:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+      - redis
+    networks:
+      - azure_container_apps_net
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - 6379:6379
+    networks:
+      - azure_container_apps_net
   jaeger:
     image: jaegertracing/jaeger:2.3.0
     container_name: jaeger
@@ -13,20 +48,6 @@ services:
       - 14268:14268
       - 14269:14269
       - 9411:9411
-    networks:
-      - azure_container_apps_net
-  seq:
-    image: datalust/seq:latest
-    container_name: seq
-    environment:
-      ACCEPT_EULA: Y
-    volumes:
-      - ${VOLUMES_PATH}/seq/data:/data
-    #      - ./certs:/data/Certificates
-    ports:
-      - 5343:5341
-      - 5384:80
-      - 5385:443
     networks:
       - azure_container_apps_net
   otel-collector:
@@ -48,7 +69,6 @@ services:
       - ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
     depends_on:
       - aspire-dashboard
-      - seq
       - jaeger
     networks:
       - azure_container_apps_net

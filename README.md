@@ -1,6 +1,6 @@
 # Introduction
 
-This is a simple project to demonstrate how to use Azure Functions with .NET 8.
+This is a simple project to demonstrate how to use Azure Container Apps with .NET 8.
 
 ## DEVELOPMENT SETUP
 
@@ -53,7 +53,7 @@ We use [docker compose](https://docs.docker.com/compose/) to run dependencies.
 
 From a root directory of the project run commands:
 
-- run all services (azurite, aspire-dashboard)
+- run all services (azurite, aspire-dashboard, jaeger, prometheus, cAdvisor)
 
 ```bash
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
@@ -80,7 +80,13 @@ PARENT="dev4"
 # Array of DNS entries
 DNS_ENTRIES=(
     "localhost"
+    "jaeger"
+    "cadvisor"
+    "prometheus"
+    "aspire-dashboard"
+    "otel-collector"
     "httpapi"
+    "func-app-1"
 )
 
 # Generate the DNS entries with proper numbering
@@ -184,6 +190,9 @@ docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f do
 Will be available services:
 
 - [Aspire Dashboard](http://localhost:18888)
+- [Jaeger UI](http://localhost:16686)
+- [Prometheus](http://localhost:9090)
+- [cAdvisor](http://localhost:8083)
 - [HttpApi](https://localhost:7125/swagger/index.html)
 
 - stop containers
