@@ -1,0 +1,13 @@
+services:
+  manual-container-app-job:
+    image: ${MANUAL_CONTAINER_APP_JOB_VERSION}
+    environment:
+      - DOTNET_ENVIRONMENT=${DOTNET_ENVIRONMENT:-production}
+      - OTEL_SERVICE_NAME=${MANUAL_CONTAINER_APP_JOB_SERVICE_NAME:-ManualContainerAppJob}
+      - OTEL_SERVICE_VERSION=${MANUAL_CONTAINER_APP_JOB_VERSION:-1.0.0}
+      - OTELCOL_URL=${OTELCOL_URL}
+    volumes:
+      - ${CERTIFICATES_PATH:-./certs}:/certs:ro
+    networks:
+      - azure_container_apps_net
+    restart: "no"

@@ -6,6 +6,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpApi", "src\HttpApi\Http
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shared.Observability", "src\Shared.Observability\Shared.Observability.csproj", "{8F5A9BBA-93FC-4AAE-AF5A-0652ED834D14}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Jobs", "Jobs", "{D097F7CE-3173-436C-836F-47412DADEC43}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManualContainerAppJob", "src\ManualContainerAppJob\ManualContainerAppJob.csproj", "{FF841965-64B9-4D5C-910B-341C09D18C40}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +28,12 @@ Global
 		{8F5A9BBA-93FC-4AAE-AF5A-0652ED834D14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8F5A9BBA-93FC-4AAE-AF5A-0652ED834D14}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8F5A9BBA-93FC-4AAE-AF5A-0652ED834D14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FF841965-64B9-4D5C-910B-341C09D18C40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FF841965-64B9-4D5C-910B-341C09D18C40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FF841965-64B9-4D5C-910B-341C09D18C40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FF841965-64B9-4D5C-910B-341C09D18C40}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{FF841965-64B9-4D5C-910B-341C09D18C40} = {D097F7CE-3173-436C-836F-47412DADEC43}
 	EndGlobalSection
 EndGlobal

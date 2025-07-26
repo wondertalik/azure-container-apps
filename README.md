@@ -186,6 +186,12 @@ docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CO
 docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
 ```
 
+- build ManualContainerAppJob image
+
+```bash
+docker buildx build --progress plain --platform linux/amd64,linux/arm64 --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-manual-container-app-job:1.0.0 -f src/ManualContainerAppJob/Dockerfile .
+```
+
 #### Build and push Docker images to Azure Container Registry (Optional)
 
 Optionally, we can push the images to Azure Container Registry (ACR).
@@ -209,7 +215,7 @@ docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CO
 - run all services in containers
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans 
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml -f docker-compose.manual-container-app-job.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans 
 ```
 
 Additional services will be available:
