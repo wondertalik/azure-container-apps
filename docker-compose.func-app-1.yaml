@@ -12,12 +12,21 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=${DOTNET_ENVIRONMENT:-production}
       - AzureWebJobsStorage=${AZURITE_CONNECTION_STRING}
-      - OTEL_SERVICE_NAME=${FUNCTION_APP1_OLTP_NAME}
-      - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT}
+      - OTELCOL_URL=${OTELCOL_URL:-}
+      - OTEL_SERVICE_NAME=${FUNCTION_APP_1_OLTP_NAME}
       - OTEL_EXPORTER_OTLP_HEADERS=${OTEL_EXPORTER_OTLP_HEADERS:-}
       - FUNCTIONS_EXTENSION_VERSION=~4
       - WEBSITES_ENABLE_APP_SERVICE_STORAGE=false
       - APPLICATIONINSIGHTS_CONNECTION_STRING=${APPLICATIONINSIGHTS_CONNECTION_STRING:-}
+      - Sentry__Dsn=${FUNC_APP_1_SENTRY_DSN:-}
+      - Sentry__SendDefaultPii=true
+      - Sentry__MaxRequestBodySize=Always
+      - Sentry__MinimumBreadcrumbLevel=Debug
+      - Sentry__MinimumEventLevel=Warning
+      - Sentry__AttachStackTrace=true
+      - Sentry__Debug=true
+      - Sentry__DiagnosticLevel=Error
+      - Sentry__TracesSampleRate=${FUNC_APP_1_SENTRY_TRACES_SAMPLE_RATE}
     depends_on:
       azurite:
         condition: service_healthy

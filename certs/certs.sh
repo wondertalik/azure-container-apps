@@ -5,7 +5,14 @@ PARENT="dev4"
 # Array of DNS entries
 DNS_ENTRIES=(
     "localhost"
+    "seq"
+    "jaeger"
+    "cadvisor"
+    "prometheus"
+    "aspire-dashboard"
+    "otel-collector"
     "httpapi"
+    "func-app-1"
 )
 
 # Generate the DNS entries with proper numbering

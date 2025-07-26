@@ -12,34 +12,40 @@ This is a simple project to demonstrate how to use Azure Container Apps with .NE
 - in the root directory, create the.env.dev file with
 
 ```.env.dev
-VOLUMES_PATH=~/Works/var/my-func-tst
-HTTPS_CERT_PATH=~/Works/study/AzureContainerApps/certs
+VOLUMES_PATH=~/Works/var/azure-container-apps
+HTTPS_CERT_PATH=~/Works/Training/AzureContainerApps/certs
 HTTPS_CERT_NAME_CRT=dev4.crt
 HTTPS_CERT_NAME_KEY=dev4.key
+HTTPS_CERT_NAME_PEM=dev4.pem
 DOTNET_ENVIRONMENT=Development
 
-FUNCTION_APP1_IMAGE=myexampleacrtst.azurecr.io/my-func-tst:2.0.8-release
-FUNCTION_APP1_HTTP_PORT=7263
-FUNCTION_APP1_OLTP_NAME=FunctionApp1
+FUNCTION_APP_1_IMAGE=my-func-app-1:1.0.0
+FUNCTION_APP_1_HTTP_PORT=7263
+FUNCTION_APP_1_OLTP_NAME=FunctionApp1
+FUNC_APP_1_SENTRY_DSN=
+FUNC_APP_1_SENTRY_TRACES_SAMPLE_RATE=1.0
 
-HTTPAPI_IMAGE=myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.2-release
+HTTPAPI_IMAGE=my-httpapi:1.0.0
 HTTPAPI_HTTP_PORT=5238
 HTTPAPI_HTTPS_PORT=7125
 HTTPAPI_OLTP_NAME=HttpApi
+HTTPAPI_SENTRY_DSN=
+HTTPAPI_SENTRY_TRACES_SAMPLE_RATE=1.0
 
-AZURITE_CONNECTION_STRING=
-APPLICATIONINSIGHTS_CONNECTION_STRING=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
+AZURITE_CONNECTION_STRING=AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;DefaultEndpointsProtocol=http;BlobEndpoint=http://azurite:10000/devstoreaccount1;QueueEndpoint=http://azurite:10001/devstoreaccount1;TableEndpoint=http://azurite:10002/devstoreaccount1;
+APPLICATIONINSIGHTS_CONNECTION_STRING=
 
 # observability
-ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=myprimaryapikey
-#aspire dashboard
-OTEL_EXPORTER_OTLP_ENDPOINT=http://aspire-dashboard:18889
+OTELCOL_URL=https://otel-collector:4317
 OTEL_EXPORTER_OTLP_HEADERS=x-otlp-api-key=myprimaryapikey
+
+#aspire dashboard
+ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=myprimaryapikey
 ```
 
 ### Run during development
 
-Authentication is required to pull images from Azure Container Registry.
+Authentication is required to pull images from Azure Container Registry (Optional).
 
 ```bash
 az login
@@ -58,6 +64,13 @@ From a root directory of the project run commands:
 ```bash
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
 ```
+
+Will be available services:
+
+- [Aspire Dashboard](http://localhost:18888)
+- [Jaeger UI](http://localhost:16686)
+- [Prometheus](http://localhost:9090)
+- [cAdvisor](http://localhost:8083)
 
 - stop and remove all services
 
@@ -80,6 +93,7 @@ PARENT="dev4"
 # Array of DNS entries
 DNS_ENTRIES=(
     "localhost"
+    "seq"
     "jaeger"
     "cadvisor"
     "prometheus"
@@ -142,7 +156,7 @@ chmod +x certs.sh
 
 Install certs in your system
 
-- on Mac OS
+- on macOS from the root directory of the project run:
 
 ```bash
 rm -rf ~/.aspnet
@@ -154,29 +168,40 @@ sudo security import certs/dev4.key -k /Library/Keychains/System.keychain
 
 ## DevOps
 
-This is a temporary solution to build and deploy application to Azure Container Registry and Azure Container Apps. 
-The final solution will be implemented in CI/CD.
+In this section, we will build Docker images for the FunctionApp1 and HttpApi services and run them in containers.`
 
 ### Build and push Docker image
 
-```bash
-az login
-```
-
-```bash
-az acr login -n myexampleacrtst
-```
+#### Local build
 
 - build FunctionApp1 image
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.20-release -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-func-app-1:1.0.0 -f src/FunctionApp1/Dockerfile .
 ```
 
 - build HttpApi image
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg SSL_CRT_DIRECTORY=certs --build-arg SSL_CRT_NAME=dev4.crt --build-arg SSL_KEY_NAME=dev4.key --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release -f src/HttpApi/Dockerfile .
+docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
+```
+
+#### Build and push Docker images to Azure Container Registry (Optional)
+
+Optionally, we can push the images to Azure Container Registry (ACR).
+To do this, you need to have an ACR instance created and authenticated.
+
+For this example, we will use the `myexampleacrtst` ACR instance. To build and push images to ACR, you need to
+authenticate with ACR using the Azure CLI:
+
+```bash
+az acr login -n myexampleacrtst
+```
+
+Then, you can build and push the images using docker buildx
+
+```bash
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key --push -t myexampleacrtst.azurecr.io/my-func:1.0.0 -f src/FunctionApp1/Dockerfile .
 ```
 
 ### Run to check is everything works with containers
@@ -187,19 +212,9 @@ docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans 
 ```
 
-Will be available services:
+Additional services will be available:
 
-- [Aspire Dashboard](http://localhost:18888)
-- [Jaeger UI](http://localhost:16686)
-- [Prometheus](http://localhost:9090)
-- [cAdvisor](http://localhost:8083)
 - [HttpApi](https://localhost:7125/swagger/index.html)
-
-- stop containers
-
-```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps stop
-```
 
 - stop containers and remove containers
 
