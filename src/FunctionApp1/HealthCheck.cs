@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
@@ -11,6 +12,9 @@ public class HealthCheck(ILogger<HealthCheck> logger)
     [Function("HealthCheck")]
     public IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequestData req)
     {
+        Activity? act = Activity.Current;
+        if (act != null) act.DisplayName = "Func.HealthCheck";
+        
         logger.LogInformation("Health check requested");
 
         try
@@ -26,7 +30,7 @@ public class HealthCheck(ILogger<HealthCheck> logger)
                 Status: "Unhealthy",
                 Version: Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION") ?? "Unknown",
                 Timestamp: DateTimeOffset.UtcNow,
-                Service: "OptiLeads.LeadsProcessor",
+                Service: "FunctionApp1",
                 ErrorMessage: ex.Message
             ))
             {
@@ -43,7 +47,7 @@ public class HealthCheck(ILogger<HealthCheck> logger)
             Status: "Healthy",
             Version: version,
             Timestamp: DateTimeOffset.UtcNow,
-            Service: "OptiLeads.LeadsProcessor"
+            Service: "FunctionApp1"
         );
     }
 
