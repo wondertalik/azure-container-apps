@@ -45,6 +45,9 @@ param httpApiContainerAppScaleMinReplicas int = 0
 @description('HttpApi scale max replicas')
 param httpApiContainerAppScaleMaxReplicas int = 3
 
+@description('Enable health probes for the container app')
+param enableHttpApiContainerAppHealthProbes bool = false
+
 // FunctionApp1
 @description('Full image name of the azure function container app')
 param functionApp1Image string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
@@ -117,7 +120,6 @@ module azureContainerRegistry './modules/azure-container-registry.bicep' = {
     userIdentityResourceGroupName: applicationResourceGroup.name
   }
   scope: az.resourceGroup(azureContainerRegistryResourceGroupName)
-  dependsOn: [userAssignIdentity]
 }
 
 module applicationContainerAppsEnvironment './modules/azure-container-apps-environment.bicep' = {
@@ -131,7 +133,6 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
     namePrefix: '01'
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup]
 }
 
 module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableFunctionApp1Image) {
@@ -154,7 +155,6 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     functionAppScaleLimit: functionApp1ScaleLimit
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
 }
 
 module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = if (enableHttpApiContainerAppImage) {
@@ -169,11 +169,12 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
     azureContainerRegistryName: azureContainerRegistryName
     containerAppName: httpApiContainerAppName
     containerAppImage: httpApiContainerAppImage
-    resourcesCpu: httpApiContainerAppResourcesCpu
+    resourcesCpu: httpApiContainerAppResourcesCpu 
     resourcesMemory: httpApiContainerAppResourcesMemory
     scaleMinReplicas: httpApiContainerAppScaleMinReplicas
     scaleMaxReplicas: httpApiContainerAppScaleMaxReplicas
+    enableHealthProbes: enableHttpApiContainerAppHealthProbes
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [applicationResourceGroup, userAssignIdentity, telemetry, keyVault, applicationContainerAppsEnvironment]
+  dependsOn: [keyVault]
 }

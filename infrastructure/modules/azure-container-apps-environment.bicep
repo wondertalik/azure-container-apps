@@ -16,7 +16,7 @@ param applicationInsightsName string
 @description('Prefix of user assigned identity')
 param namePrefix string
 
-resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2023-09-01' existing = {
+resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' existing = {
   name: logAnalyticsWorkspaceName
 }
 
@@ -24,7 +24,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing
   name: applicationInsightsName
 }
 
-resource vnet 'Microsoft.Network/virtualNetworks@2024-01-01' = {
+resource vnet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
   name: 'vnet-01-${location}-${projectName}-${targetEnvironment}'
   location: location
   tags: {
@@ -104,7 +104,7 @@ resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-
   }
 }
 
-resource dotNetComponent 'Microsoft.App/managedEnvironments/dotNetComponents@2024-08-02-preview' = {
+resource dotNetComponent 'Microsoft.App/managedEnvironments/dotNetComponents@2025-02-02-preview' = {
   name: 'aspire-dashboard'
   parent: containerAppsEnvironment
   properties: {

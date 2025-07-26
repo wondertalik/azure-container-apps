@@ -8,3 +8,5 @@ riderModule.iml
 .vscode/
 .env.dev
 AzureContainerApps.sln.DotSettings.user
+**/.DS_Store
+infrastructure/runs/
