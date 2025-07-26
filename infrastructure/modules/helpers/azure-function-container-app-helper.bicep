@@ -43,7 +43,7 @@ param resourcesCpu string
 @description('Memory resources')
 param resourcesMemory string
 
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' existing = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2025-01-01' existing = {
   name: containerAppsEnvironmentName
 }
 
@@ -51,11 +51,11 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' existing
   name: applicationInsightsName
 }
 
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' existing = {
   name: userAssignedIdentityName
 }
 
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' existing = {
   name: keyVaultName
 }
 
@@ -65,7 +65,7 @@ var stringWithoutHyphens = replace(azureFunctionName, '-', '')
 // Convert the string to lowercase
 var storageAccountName = toLower(stringWithoutHyphens)
 
-resource azStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
+resource azStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
   name: '${storageAccountName}${targetEnvironment}' // 3 and 24 characters in length and use numbers and lower-case letters only.
   location: location
   kind: 'StorageV2'
@@ -81,7 +81,7 @@ resource azStorageAccount 'Microsoft.Storage/storageAccounts@2023-05-01' = {
 }
 
 var functionAppName = 'func-${azureFunctionName}-${projectName}-${targetEnvironment}'
-resource azfunctionapp 'Microsoft.Web/sites@2024-04-01' = {
+resource azfunctionapp 'Microsoft.Web/sites@2024-11-01' = {
   name: functionAppName
   location: location
   kind: 'functionapp,linux,container,azurecontainerapps'

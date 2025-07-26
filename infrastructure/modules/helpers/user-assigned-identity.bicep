@@ -10,7 +10,7 @@ param targetEnvironment string
 @description('Prefix of user assigned identity')
 param namePrefix string
 
-resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+resource identity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' = {
   name: 'id-${namePrefix}-${location}-${projectName}-${targetEnvironment}'
   location: location
   tags: {
