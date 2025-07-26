@@ -8,9 +8,16 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Sentry.Azure.Functions.Worker;
+using Sentry.OpenTelemetry;
 using Shared.Observability;
 
 FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
+builder.UseSentry(options =>
+{
+    options.UseOpenTelemetry();
+    options.DisableSentryHttpMessageHandler = true;
+});
 builder.ConfigureFunctionsWebApplication();
 builder.Configuration.AddUserSecrets<Program>();
 
@@ -32,6 +39,8 @@ builder.Services
         );
         traceBuilder.SetSampler(new AlwaysOnSampler())
             .AddSource("Microsoft.Azure.Functions.Worker");
+        
+        traceBuilder.AddSentry();
     })
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
 

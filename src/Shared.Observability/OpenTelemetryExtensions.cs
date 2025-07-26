@@ -149,18 +149,23 @@ public static class OpenTelemetryExtensions
             {
                 options.FilterHttpRequestMessage = message =>
                 {
-                    //do not send seq request to jaeger
+                    //do not send sentry request to otel collector
+                    bool excludeSentryEvent = message.RequestUri?.Host.Contains(".sentry.io") ?? false;
+                    if (excludeSentryEvent)
+                        return false;
+                    
+                    //do not send seq request to otel collector
                     bool excludeSeqEvent = message.RequestUri?.AbsolutePath.Equals("/api/events/raw") ?? false;
                     if (excludeSeqEvent)
                         return false;
 
-                    //do not send seq request to jaeger
+                    //do not send seq request to otel collector
                     bool excludeLiveDiagnosticsEvent =
                         message.RequestUri?.Host.Contains(".livediagnostics.monitor.azure.com") ?? false;
                     if (excludeLiveDiagnosticsEvent)
                         return false;
 
-                    //do not send seq request to jaeger
+                    //do not send seq request to otel collector
                     bool excludeApplicationInsightsEvent =
                         message.RequestUri?.Host.Contains("applicationinsights.azure.com") ?? false;
                     if (excludeApplicationInsightsEvent)

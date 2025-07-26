@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 
@@ -8,6 +9,9 @@ public class TimerTriggerOne(ILogger<TimerTriggerOne> logger)
     [Function("TimerTriggerOne")]
     public void Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
     {
+        Activity? act = Activity.Current;
+        if (act != null) act.DisplayName = "Func.TimerTriggerOne";
+        
         logger.LogDebug("1_Testing Log Debug");
 
         logger.LogTrace("1_Testing Log Trace");
