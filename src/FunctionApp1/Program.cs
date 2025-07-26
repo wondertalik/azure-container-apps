@@ -1,3 +1,4 @@
+using FunctionApp1.Diagnostics;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
 using Microsoft.Azure.Functions.Worker.OpenTelemetry;
@@ -6,9 +7,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
+using OpenTelemetry.Trace;
+using Sentry.Azure.Functions.Worker;
+using Sentry.OpenTelemetry;
 using Shared.Observability;
 
 FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
+builder.UseSentry(options =>
+{
+    options.UseOpenTelemetry();
+    options.DisableSentryHttpMessageHandler = true;
+});
 builder.ConfigureFunctionsWebApplication();
 builder.Configuration.AddUserSecrets<Program>();
 
@@ -18,8 +27,21 @@ otel.UseFunctionsWorkerDefaults();
 builder.Logging.AddOpenTelemetryLogsInstrumentation(builder.Configuration);
 builder.Services
     .AddAzureMonitor(builder.Configuration, otel)
+    .ConfigureOpenTelemetryResource(builder.Configuration, otel)
     .AddOpenTelemetryMetricsInstrumentation(builder.Configuration, otel)
-    .AddOpenTelemetryTracingInstrumentation(builder.Configuration, otel)
+    .AddOpenTelemetryTracingInstrumentation(builder.Configuration, otel, traceBuilder =>
+    {
+        traceBuilder.AddSource(nameof(FunctionApp1Instrumentation));
+        traceBuilder.AddSource("Azure.*");
+        traceBuilder.AddSource(
+            "Azure.Cosmos.Operation", // Cosmos DB source for operation level telemetry
+            "Sample.Application"
+        );
+        traceBuilder.SetSampler(new AlwaysOnSampler())
+            .AddSource("Microsoft.Azure.Functions.Worker");
+        
+        traceBuilder.AddSentry();
+    })
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
 
 string? applicationInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
@@ -44,4 +66,6 @@ if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
     });
 }
 
-await builder.Build().RunAsync();
+IHost host = builder.Build();
+
+host.Run();

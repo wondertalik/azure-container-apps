@@ -7,6 +7,8 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Shared.Observability.Options;
 using Azure.Monitor.OpenTelemetry.AspNetCore;
+using OpenTelemetry.Exporter;
+using OpenTelemetry.Resources;
 
 namespace Shared.Observability;
 
@@ -32,8 +34,7 @@ public static class OpenTelemetryExtensions
 
         return services;
     }
-
-
+    
     public static void AddOpenTelemetryLogsInstrumentation(this ILoggingBuilder builder,
         IConfiguration configuration, Action<OpenTelemetryLoggerOptions>? configureLoggerOptions = null)
     {
@@ -45,6 +46,25 @@ public static class OpenTelemetryExtensions
             options.IncludeFormattedMessage = true;
             options.IncludeScopes = true;
             configureLoggerOptions?.Invoke(options);
+            
+            string? otelcolUrl = configuration["OTELCOL_URL"];
+            if (!string.IsNullOrEmpty(otelcolUrl))
+            {
+                options.AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri($"{otelcolUrl}");
+                    otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+
+                    string? seqApiKey = configuration["SEQ_API_KEY"];
+                    if (string.IsNullOrEmpty(seqApiKey) is false)
+                    {
+                        const string headerKey = "X-Seq-ApiKey";
+
+                        string formattedHeader = $"{headerKey}={seqApiKey}";
+                        otlpOptions.Headers = formattedHeader;
+                    }
+                });
+            }
 
             if (otelOltpLogsOptions?.ConsoleExporter ?? false)
                 options.AddConsoleExporter();
@@ -68,6 +88,26 @@ public static class OpenTelemetryExtensions
                 .AddMeter("Microsoft.AspNetCore.Server.Kestrel");
 
             configureMeterProviderBuilder?.Invoke(meterBuilder);
+            
+            string? otelcolUrl = configuration["OTELCOL_URL"];
+
+            if (!string.IsNullOrEmpty(otelcolUrl))
+            {
+                meterBuilder.AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri($"{otelcolUrl}");
+                    otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+
+                    string? seqApiKey = configuration["SEQ_API_KEY"];
+                    if (string.IsNullOrEmpty(seqApiKey) is false)
+                    {
+                        const string headerKey = "X-Seq-ApiKey";
+
+                        string formattedHeader = $"{headerKey}={seqApiKey}";
+                        otlpOptions.Headers = formattedHeader;
+                    }
+                });
+            }
 
             if (otelOltpMetricsOptions?.ConsoleExporter ?? false)
                 meterBuilder.AddConsoleExporter();
@@ -85,6 +125,10 @@ public static class OpenTelemetryExtensions
             var otelOltpTracingOptions = configuration
                 .GetSection(OtelOltpTracingOptions.ConfigSectionName).Get<OtelOltpTracingOptions>();
 
+            AppContext.SetSwitch("Azure.Experimental.EnableActivitySource", true);
+
+            tracing.AddGrpcClientInstrumentation();
+            tracing.AddGrpcCoreInstrumentation();
             tracing.AddAspNetCoreInstrumentation(options =>
             {
                 options.Filter = context =>
@@ -94,7 +138,8 @@ public static class OpenTelemetryExtensions
                         "/metrics",
                         "/favicon.ico",
                         "/robots.txt",
-                        "/healthz"
+                        "/healthz",
+                        "/api/health"
                     };
                     bool excludeEvent = excludeSegments.Any(x => context.Request.Path.StartsWithSegments(x));
                     return !excludeEvent;
@@ -104,22 +149,63 @@ public static class OpenTelemetryExtensions
             {
                 options.FilterHttpRequestMessage = message =>
                 {
-                    //filter azure noising traces
+                    //do not send sentry request to otel collector
+                    bool excludeSentryEvent = message.RequestUri?.Host.Contains(".sentry.io") ?? false;
+                    if (excludeSentryEvent)
+                        return false;
+                    
+                    //do not send seq request to otel collector
+                    bool excludeSeqEvent = message.RequestUri?.AbsolutePath.Equals("/api/events/raw") ?? false;
+                    if (excludeSeqEvent)
+                        return false;
+
+                    //do not send seq request to otel collector
                     bool excludeLiveDiagnosticsEvent =
                         message.RequestUri?.Host.Contains(".livediagnostics.monitor.azure.com") ?? false;
                     if (excludeLiveDiagnosticsEvent)
                         return false;
-    
+
+                    //do not send seq request to otel collector
                     bool excludeApplicationInsightsEvent =
                         message.RequestUri?.Host.Contains("applicationinsights.azure.com") ?? false;
                     if (excludeApplicationInsightsEvent)
                         return false;
-    
+
+                    bool excludeAzureFunctionsEvent =
+                        message.RequestUri?.AbsolutePath.Equals("/AzureFunctionsRpcMessages.FunctionRpc/EventStream") ??
+                        false;
+                    if (excludeAzureFunctionsEvent)
+                        return false;
+
+                    bool excludeAzureFunctionsHostMeta = message.RequestUri?.Host.Equals("169.254.169.254") ?? false;
+                    if (excludeAzureFunctionsHostMeta)
+                        return false;
+
                     return true;
                 };
             });
 
             configureTracerProviderBuilder?.Invoke(tracing);
+            
+            string? otelcolUrl = configuration["OTELCOL_URL"];
+
+            if (!string.IsNullOrEmpty(otelcolUrl))
+            {
+                tracing.AddOtlpExporter(otlpOptions =>
+                {
+                    otlpOptions.Endpoint = new Uri($"{otelcolUrl}");
+                    otlpOptions.Protocol = OtlpExportProtocol.Grpc;
+
+                    string? seqApiKey = configuration["SEQ_API_KEY"];
+                    if (string.IsNullOrWhiteSpace(seqApiKey) is false)
+                    {
+                        const string headerKey = "X-Seq-ApiKey";
+
+                        string formattedHeader = $"{headerKey}={seqApiKey}";
+                        otlpOptions.Headers = formattedHeader;
+                    }
+                });
+            }
 
             if (otelOltpTracingOptions?.ConsoleExporter ?? false)
                 tracing.AddConsoleExporter();
@@ -133,10 +219,38 @@ public static class OpenTelemetryExtensions
     {
         // Export OpenTelemetry data via OTLP, using env vars for the configuration
         string? otlpEndpoint = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
-        if (!string.IsNullOrWhiteSpace(otlpEndpoint))
+        string? otelColUrl = configuration["OTELCOL_URL"];
+
+        if (!string.IsNullOrWhiteSpace(otlpEndpoint) && string.IsNullOrWhiteSpace(otelColUrl))
         {
             otel.UseOtlpExporter();
         }
+
+        return services;
+    }
+
+    public static IServiceCollection ConfigureOpenTelemetryResource(
+        this IServiceCollection services, IConfiguration configuration, IOpenTelemetryBuilder otel)
+    {
+        string? serviceName = configuration["OTEL_SERVICE_NAME"];
+        if (string.IsNullOrWhiteSpace(serviceName)) return services;
+        
+        string? serviceVersion = configuration["OTEL_SERVICE_VERSION"];
+
+        otel.ConfigureResource(resource =>
+        {
+            resource.AddService(serviceName: serviceName, serviceVersion: serviceVersion,
+                autoGenerateServiceInstanceId: false);
+
+            // Add custom attribute for environment
+            Dictionary<string, object> attributes = new();
+
+            string? environment = configuration["ASPNETCORE_ENVIRONMENT"];
+            if (!string.IsNullOrWhiteSpace(environment))
+                attributes.Add("deployment.environment", environment);
+
+            resource.AddAttributes(attributes);
+        });
 
         return services;
     }

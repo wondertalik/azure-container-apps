@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0.18 AS base
 ARG SSL_CRT_DIRECTORY=certs
 ARG SSL_CRT_NAME=dev.crt
 ARG SSL_KEY_NAME=dev.key
@@ -7,6 +7,7 @@ EXPOSE 8080
 EXPOSE 8081
 
 RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY ${SSL_CRT_DIRECTORY}/${SSL_CRT_NAME} /usr/local/share/ca-certificates/$SSL_CRT_NAME
@@ -17,7 +18,7 @@ RUN chmod 644 /usr/local/share/ca-certificates/$SSL_CRT_NAME
 RUN cat /usr/local/share/ca-certificates/$SSL_CRT_NAME >> /etc/ssl/certs/ca-certificates.crt \
        && update-ca-certificates 
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.412 AS build
 ARG TARGETARCH
 ARG BUILD_CONFIGURATION=Release
 

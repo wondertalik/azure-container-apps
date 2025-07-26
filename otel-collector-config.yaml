@@ -1,0 +1,79 @@
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+        tls:
+          cert_file: /var/otel/certs/dev.crt
+          key_file: /var/otel/certs/dev.key
+        include_metadata: true
+      http:
+        endpoint: 0.0.0.0:4318
+        tls:
+          cert_file: /var/otel/certs/dev.crt
+          key_file: /var/otel/certs/dev.key
+        include_metadata: true
+
+processors:
+  attributes:
+    actions:
+      - key: http.client_ip
+        from_context: metadata.x-forwarded-for
+        action: upsert
+  
+  batch:
+    metadata_keys:
+      - x-otlp-api-key
+      - metadata.x-otlp-api-key
+    # limit to 10 batcher processes before raising errors
+    metadata_cardinality_limit: 10
+
+exporters:
+  debug:
+    verbosity: detailed
+    sampling_initial: 5
+    sampling_thereafter: 200
+  otlp/jaeger:
+    endpoint: http://jaeger:4317
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+  otlp/aspire-dashboard:
+    endpoint: http://aspire-dashboard:18889
+    tls:
+      insecure: true
+      insecure_skip_verify: true
+    auth:
+      authenticator: headers_setter
+  # Data sources: metrics
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/write
+    tls:
+       insecure: true
+
+extensions:
+  headers_setter:
+    headers:
+      - action: insert
+        key: x-otlp-api-key
+        value: ${env:ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
+#        from_context:  x-otlp-api-key
+  health_check:
+  pprof:
+  zpages:
+
+service:
+  extensions: [ pprof, health_check, zpages, headers_setter ]
+  pipelines:
+    traces:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp/aspire-dashboard, otlp/jaeger, debug ]
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp/aspire-dashboard, prometheusremotewrite, debug ]
+    logs:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ otlp/aspire-dashboard, debug ]

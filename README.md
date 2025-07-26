@@ -1,6 +1,6 @@
 # Introduction
 
-This is a simple project to demonstrate how to use Azure Functions with .NET 8.
+This is a simple project to demonstrate how to use Azure Container Apps with .NET 8.
 
 ## DEVELOPMENT SETUP
 
@@ -9,7 +9,7 @@ This is a simple project to demonstrate how to use Azure Functions with .NET 8.
 - install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/)
 - [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
-- in root directory create .env.dev file with
+- in the root directory, create the.env.dev file with
 
 ```.env.dev
 VOLUMES_PATH=~/Works/var/my-func-tst
@@ -51,9 +51,9 @@ az acr login -n myexampleacrtst
 
 We use [docker compose](https://docs.docker.com/compose/) to run dependencies.
 
-From a root directory of project run commands:
+From a root directory of the project run commands:
 
-- run all services (azurite, aspire-dashboard)
+- run all services (azurite, aspire-dashboard, jaeger, prometheus, cAdvisor)
 
 ```bash
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
@@ -67,7 +67,8 @@ docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env
 
 ### Self-signed certificate
 
-Before start necessary generate self-signed certificated.
+Before you start, you need to generate certificates
+
 More detail in an
 official [docs](https://learn.microsoft.com/en-us/dotnet/core/additional-tools/self-signed-certificates-guide#with-openssl)
 
@@ -75,6 +76,28 @@ official [docs](https://learn.microsoft.com/en-us/dotnet/core/additional-tools/s
 #!/bin/bash
 
 PARENT="dev4"
+
+# Array of DNS entries
+DNS_ENTRIES=(
+    "localhost"
+    "jaeger"
+    "cadvisor"
+    "prometheus"
+    "aspire-dashboard"
+    "otel-collector"
+    "httpapi"
+    "func-app-1"
+)
+
+# Generate the DNS entries with proper numbering
+DNS_SECTION=""
+ORDER=1
+for DNS in "${DNS_ENTRIES[@]}"; do
+    DNS_SECTION+="DNS.${ORDER} = ${DNS}\n"
+    ((ORDER++))
+    DNS_SECTION+="DNS.${ORDER} = www.${DNS}\n"
+    ((ORDER++))
+done
 
 openssl req \
 -x509 \
@@ -98,11 +121,8 @@ openssl req \
   echo 'keyUsage = nonRepudiation, digitalSignature, keyEncipherment'; \
   echo 'subjectAltName = @alt_names'; \
   echo '[ alt_names ]'; \
-  echo "DNS.1 = www.localhost"; \
-  echo "DNS.2 = localhost"; \
-  echo "DNS.3 = www.httpapi"; \
-  echo "DNS.4 = httpapi"; \
-  echo '[ v3_ca ]'; \
+  echo -e "${DNS_SECTION}"; \
+  echo '[v3_ca]'; \
   echo 'subjectKeyIdentifier=hash'; \
   echo 'authorityKeyIdentifier=keyid:always,issuer'; \
   echo 'basicConstraints = critical, CA:TRUE, pathlen:0'; \
@@ -150,7 +170,7 @@ az acr login -n myexampleacrtst
 - build FunctionApp1 image
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --push -t myexampleacrtst.azurecr.io/my-func-tst:2.0.20-release -f src/FunctionApp1/Dockerfile .
 ```
 
 - build HttpApi image
@@ -164,22 +184,25 @@ docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-
 - run all services in containers
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans 
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans 
 ```
 
 Will be available services:
 
 - [Aspire Dashboard](http://localhost:18888)
+- [Jaeger UI](http://localhost:16686)
+- [Prometheus](http://localhost:9090)
+- [cAdvisor](http://localhost:8083)
 - [HttpApi](https://localhost:7125/swagger/index.html)
 
 - stop containers
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps stop
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps stop
 ```
 
 - stop containers and remove containers
 
 ```bash
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps down
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps down
 ```
