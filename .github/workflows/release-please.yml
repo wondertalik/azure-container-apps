@@ -1,9 +1,13 @@
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: write
   pull-requests: write
+  issues: write
 
 name: release-please
 
