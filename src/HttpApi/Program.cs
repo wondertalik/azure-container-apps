@@ -1,17 +1,20 @@
 using HttpApi.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Sentry.Extensions.Logging;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseSentry(options =>
-{
-    options.UseOpenTelemetry();
-    options.DisableSentryHttpMessageHandler = true;
-});
 
 // Add services to the container.
+builder.Services.Configure<SentryLoggingOptions>(builder.Configuration.GetSection("Sentry"));
+
+builder.Logging.AddSentry(options =>
+{
+    options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information
+});
+
 OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
 builder.Logging.AddOpenTelemetryLogsInstrumentation(builder.Configuration);
 builder.Services

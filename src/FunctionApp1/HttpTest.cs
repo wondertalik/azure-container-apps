@@ -11,6 +11,7 @@ public class HttpTest(ILogger<HttpTest> logger)
     public IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post")] HttpRequest req, FunctionContext executionContext)
     {
         logger.LogInformation("C# HTTP trigger function processed a request.");
+        throw new InvalidOperationException("This is a test exception for Sentry logging.");
         return new OkObjectResult("Welcome to Azure Functions!");
     }
 

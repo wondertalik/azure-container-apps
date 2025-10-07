@@ -18,8 +18,9 @@
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Extensions.Timer" Version="4.3.1" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.OpenTelemetry" Version="1.1.0-preview6" />
         <PackageReference Include="Microsoft.Azure.Functions.Worker.Sdk" Version="2.0.5" />
-        <PackageReference Include="Sentry.Azure.Functions.Worker" Version="5.14.1" />
-        <PackageReference Include="Sentry.OpenTelemetry" Version="5.14.1" />
+        <PackageReference Include="Sentry.Extensions.Logging" Version="5.15.0" />
+        <PackageReference Include="Sentry.OpenTelemetry" Version="5.15.0" />
+        <PackageReference Include="Sentry" Version="5.15.0" />
     </ItemGroup>
     <ItemGroup>
         <None Update="host.json">
