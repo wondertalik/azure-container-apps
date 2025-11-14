@@ -9,7 +9,6 @@ using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
 using Sentry.Extensions.Logging;
-// using Sentry.Azure.Functions.Worker;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
 
@@ -18,13 +17,34 @@ FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
 builder.ConfigureFunctionsWebApplication();
 builder.Configuration.AddUserSecrets<Program>();
 
-builder.Services.Configure<SentryLoggingOptions>(
-    builder.Configuration.GetSection("Sentry"));
+string? sentryDsn = builder.Configuration.GetValue<string>("Sentry:Dsn");
 
-builder.Logging.AddSentry(options =>
+if (!string.IsNullOrEmpty(sentryDsn))
 {
-    options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information
-});
+    builder.Services.Configure<SentryLoggingOptions>(
+        builder.Configuration.GetSection("Sentry"));
+
+    builder.Logging.AddSentry(options =>
+    {
+        options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information
+    });
+    
+    // https://github.com/getsentry/sentry-dotnet/issues/4539
+    // builder.Logging.Services.Configure<LoggerFilterOptions>(static (LoggerFilterOptions options) =>
+    // {
+    //     LoggerFilterRule rule = options.Rules.Single(static (LoggerFilterRule rule) => rule.ProviderName == "Sentry.AspNetCore.SentryAspNetCoreStructuredLoggerProvider");
+    //     bool removed = options.Rules.Remove(rule);
+    //     if (!removed)
+    //     {
+    //         throw new InvalidOperationException("Rule for Sentry's Structured Logs not found.");
+    //     }
+    //
+    //     rule = new LoggerFilterRule(rule.ProviderName, "Sentry.ISentryClient", LogLevel.None, null);
+    //     options.Rules.Add(rule);
+    //     rule = new LoggerFilterRule(rule.ProviderName, "Sentry.AspNetCore.SentryMiddleware", LogLevel.None, null);
+    //     options.Rules.Add(rule);
+    // });
+}
 
 // Export OpenTelemetry data via OTLP, using env vars for the configuration
 OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
@@ -46,7 +66,10 @@ builder.Services
         traceBuilder.SetSampler(new AlwaysOnSampler())
             .AddSource("Microsoft.Azure.Functions.Worker");
 
-        traceBuilder.AddSentry();
+        if (!string.IsNullOrWhiteSpace(sentryDsn))
+        {
+            traceBuilder.AddSentry();
+        }
     })
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
 
