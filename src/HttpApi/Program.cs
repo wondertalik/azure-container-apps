@@ -1,15 +1,22 @@
 using HttpApi.Diagnostics;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
+using Sentry.Extensions.Logging;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
-builder.WebHost.UseSentry(options =>
+string? sentryDsn = builder.Configuration.GetValue<string>("Sentry:Dsn");
+
+if (!string.IsNullOrEmpty(sentryDsn))
 {
-    options.UseOpenTelemetry();
-    options.DisableSentryHttpMessageHandler = true;
-});
+    builder.Services.Configure<SentryLoggingOptions>(builder.Configuration.GetSection("Sentry"));
+
+    builder.Logging.AddSentry(options =>
+    {
+        options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information
+    });
+}
 
 // Add services to the container.
 OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();
@@ -26,7 +33,10 @@ builder.Services
             "Azure.Cosmos.Operation", // Cosmos DB source for operation level telemetry
             "Sample.Application"
         );
-        traceBuilder.AddSentry();
+        if (!string.IsNullOrWhiteSpace(sentryDsn))
+        {
+            traceBuilder.AddSentry();
+        }
     })
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
 
