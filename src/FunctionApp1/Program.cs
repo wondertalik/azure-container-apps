@@ -1,3 +1,4 @@
+using FunctionApp1;
 using FunctionApp1.Diagnostics;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Azure.Functions.Worker.Builder;
@@ -8,7 +9,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
-using Sentry.Azure.Functions.Worker;
 using Sentry.Extensions.Logging;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
@@ -52,6 +52,9 @@ builder.Services
         }
     })
     .UseOpenTelemetryOltpExporter(builder.Configuration, otel);
+builder.Services.ConfigureInstrumentation();
+
+builder.Services.ConfigureServices(builder.Configuration);
 
 string? applicationInsightsConnectionString = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
 if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
