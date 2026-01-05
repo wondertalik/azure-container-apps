@@ -8,7 +8,6 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
-using Sentry.Azure.Functions.Worker;
 using Sentry.Extensions.Logging;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
