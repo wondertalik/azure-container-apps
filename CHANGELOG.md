@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/wondertalik/azure-container-apps/compare/v1.1.1...v1.1.2) (2026-01-05)
+
+
+### Dependencies
+
+* upgrade deps ([#9](https://github.com/wondertalik/azure-container-apps/issues/9)) ([ca16d89](https://github.com/wondertalik/azure-container-apps/commit/ca16d890e7e108b64a2b3bf9cda8205ce13bf38a))
+
 ## [1.1.1](https://github.com/wondertalik/azure-container-apps/compare/v1.1.0...v1.1.1) (2025-11-17)
 
 
