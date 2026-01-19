@@ -12,12 +12,16 @@ This is a simple project to demonstrate how to use Azure Container Apps with .NE
 - in the root directory, create the.env.dev file with
 
 ```.env.dev
-VOLUMES_PATH=~/Works/var/azure-container-apps
+BACKUP_VOLUMES_PATH=~/Works/var/azure-container-apps/backups
+VOLUMES_PATH=~/Works/var/azure-container-apps/volumes
 HTTPS_CERT_PATH=~/Works/Training/AzureContainerApps/certs
 HTTPS_CERT_NAME_CRT=dev4.crt
 HTTPS_CERT_NAME_KEY=dev4.key
 HTTPS_CERT_NAME_PEM=dev4.pem
 DOTNET_ENVIRONMENT=Development
+
+MSSQL_SA_PASSWORD=Admin_123Password
+MSSQL_HOST_PORT=1434
 
 FUNCTION_APP_1_IMAGE=my-func-app-1:1.0.0
 FUNCTION_APP_1_HTTP_PORT=7263

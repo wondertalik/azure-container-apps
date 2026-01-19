@@ -1,6 +1,6 @@
 services:
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:latest
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
     volumes:
       - ${VOLUMES_PATH}/azurite/data:/data
     command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck"
@@ -14,6 +14,50 @@ services:
       - "10002:10002"
     networks:
       - azure_container_apps_net
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2022-CU14-ubuntu-22.04
+    container_name: mssql
+    user: root
+    ports:
+      - ${MSSQL_HOST_PORT}:1433
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    volumes:
+      - ${VOLUMES_PATH}/mssql/data:/var/opt/mssql/data
+      - ${BACKUP_VOLUMES_PATH}:/var/mssql/backup
+    networks:
+      - azure_container_apps_net
+  azure-service-bus-emulator:
+    image: mcr.microsoft.com/azure-messaging/servicebus-emulator:1.1.2
+    container_name: "servicebus-emulator"
+    volumes:
+      - "./azure-service-bus-emulator-config.json:/ServiceBus_Emulator/ConfigFiles/Config.json"
+    ports:
+      - "5672:5672"
+      - "5300:5300"
+    environment:
+      SQL_SERVER: mssql
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+      ACCEPT_EULA: Y
+    depends_on:
+      - mssql
+    networks:
+      - azure_container_apps_net
+  healthcheck-sidecar-service-bus-emulator:
+    image: busybox
+    depends_on:
+      - azure-service-bus-emulator
+    command: >
+      sh -c "sleep 25; while true; do wget -q --spider http://azure-service-bus-emulator:5300/health && sleep 10 || exit 1; done"
+    networks:
+      - azure_container_apps_net
+    healthcheck:
+      test: [ "CMD", "wget", "-q", "--spider", "http://azure-service-bus-emulator:5300/health" ]
+      interval: 40s
+      timeout: 15s
+      retries: 3
+    restart: always
 networks:
   azure_container_apps_net:
     driver: bridge
