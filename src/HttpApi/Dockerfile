@@ -12,6 +12,7 @@ RUN apt-get update \
 ARG CERT_HASH
 RUN --mount=type=secret,id=dev-crt,target=/tmp/dev.crt \
     --mount=type=secret,id=dev-key,target=/tmp/dev.key \
+    echo "cert-hash:${CERT_HASH}" && \
     mkdir -p /usr/local/share/dev && \
     cp /tmp/dev.crt /usr/local/share/ca-certificates/dev.crt && \
     cp /tmp/dev.key /usr/local/share/dev/dev.key && \
