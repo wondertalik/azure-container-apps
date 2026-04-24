@@ -65,8 +65,9 @@ On first clone, copy the template:
 cp src/FunctionApp1/local.settings.template.json src/FunctionApp1/local.settings.json
 ```
 
-Then fill in real values via [.NET user-secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets) (do **not** commit `local.settings.json`). When adding a new required setting, add the key (with an empty placeholder value) to `local.settings.template.json` and commit that file.
+Keep Azure Functions host/runtime settings in `src/FunctionApp1/local.settings.json` (or provide them as environment variables visible to the Functions host). This includes keys required by triggers/bindings, such as `AzureWebJobsStorage`, because Azure Functions Core Tools/runtime does not read those values from [.NET user-secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets).
 
+Use .NET user-secrets only for application settings that are read through the normal .NET configuration pipeline. Do **not** commit `local.settings.json`. When adding a new required setting, add the key (with an empty placeholder value) to `local.settings.template.json` and commit that file.
 We use [docker compose](https://docs.docker.com/compose/) to run dependencies.
 
 From a root directory of the project run commands:
