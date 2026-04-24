@@ -24,7 +24,7 @@ services:
     environment:
       - PYTHONWARNINGS=ignore
       - AZURITE_CONNECTION_STRING=${AZURITE_CONNECTION_STRING}
-    entrypoint: ["sh", "/init-azurite-containers.sh"]
+    entrypoint: ["bash", "/init-azurite-containers.sh"]
     networks:
       - azure_container_apps_net
 networks:
