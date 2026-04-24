@@ -1,6 +1,6 @@
 services:
   azurite:
-    image: mcr.microsoft.com/azure-storage/azurite:latest
+    image: mcr.microsoft.com/azure-storage/azurite:3.35.0
     volumes:
       - ${VOLUMES_PATH}/azurite/data:/data
     command: "azurite --blobHost 0.0.0.0 --queueHost 0.0.0.0 --tableHost 0.0.0.0 --skipApiVersionCheck"
@@ -12,6 +12,19 @@ services:
       - "10000:10000"
       - "10001:10001"
       - "10002:10002"
+    networks:
+      - azure_container_apps_net
+  azurite-init:
+    image: mcr.microsoft.com/azure-cli
+    depends_on:
+      azurite:
+        condition: service_healthy
+    volumes:
+      - ./init-azurite-containers.sh:/init-azurite-containers.sh:ro
+    environment:
+      - PYTHONWARNINGS=ignore
+      - AZURITE_CONNECTION_STRING=${AZURITE_CONNECTION_STRING}
+    entrypoint: ["sh", "/init-azurite-containers.sh"]
     networks:
       - azure_container_apps_net
 networks:
