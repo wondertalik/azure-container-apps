@@ -53,6 +53,10 @@
     {
       "type": "style",
       "section": "Code Style"
+    },
+    {
+      "type": "agents",
+      "section": "Agents"
     }
   ]
 }

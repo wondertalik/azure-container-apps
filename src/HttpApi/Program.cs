@@ -1,6 +1,5 @@
 using HttpApi.Diagnostics;
 using OpenTelemetry;
-using OpenTelemetry.Trace;
 using Sentry.Extensions.Logging;
 using Sentry.OpenTelemetry;
 using Shared.Observability;
@@ -11,7 +10,6 @@ string? sentryDsn = builder.Configuration.GetValue<string>("Sentry:Dsn");
 if (!string.IsNullOrEmpty(sentryDsn))
 {
     builder.Services.Configure<SentryLoggingOptions>(builder.Configuration.GetSection("Sentry"));
-
     builder.Logging.AddSentry(options =>
     {
         options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information

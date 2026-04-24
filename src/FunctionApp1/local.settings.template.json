@@ -1,0 +1,14 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "UseDevelopmentStorage=true",
+    "FUNCTIONS_WORKER_RUNTIME": "dotnet-isolated",
+    "APPLICATIONINSIGHTS_CONNECTION_STRING": "",
+    "AzureWebJobs.HealthCheck.Disabled": "false",
+    "AzureWebJobs.TimerTriggerOne.Disabled": "false",
+
+    "OTELCOL_URL": "",
+    "OTEL_SERVICE_NAME": "",
+    "OTEL_EXPORTER_OTLP_HEADERS": ""
+  }
+}

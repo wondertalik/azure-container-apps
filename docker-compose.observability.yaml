@@ -35,7 +35,7 @@ services:
     networks:
       - azure_container_apps_net
   jaeger:
-    image: jaegertracing/jaeger:2.3.0
+    image: jaegertracing/jaeger:2.16.0
     container_name: jaeger
     ports:
       - 6831:6831/udp
@@ -48,10 +48,27 @@ services:
       - 14268:14268
       - 14269:14269
       - 9411:9411
+    depends_on:
+      - prometheus
+    networks:
+      - azure_container_apps_net
+  seq:
+    image: datalust/seq:2025.2
+    container_name: seq
+    environment:
+      ACCEPT_EULA: Y
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
+    volumes:
+      - ${VOLUMES_PATH}/seq/data:/data
+    #      - ./certs:/data/Certificates
+    ports:
+      - 5343:5341
+      - 5384:80
+      - 5385:443
     networks:
       - azure_container_apps_net
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.119.0
+    image: otel/opentelemetry-collector-contrib:0.148.0
     volumes:
       - ./otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml
       - ./certs/${HTTPS_CERT_NAME_CRT}:/var/otel/certs/dev.crt
@@ -69,15 +86,17 @@ services:
       - ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
     depends_on:
       - aspire-dashboard
+      - seq
       - jaeger
     networks:
       - azure_container_apps_net
   aspire-dashboard:
-    image: mcr.microsoft.com/dotnet/aspire-dashboard:9.3
+    image: mcr.microsoft.com/dotnet/aspire-dashboard:13
+    container_name: aspire-dashboard
     ports:
-      - 18888:18888
-      - 18889:18889
-      - 18890:18890
+      - 18888:18888 # web-ui
+      - 18889:18889 # grpc
+      - 18890:18890 # http
     environment:
       - DASHBOARD__OTLP__AUTHMODE=ApiKey
       - DASHBOARD__OTLP__PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
@@ -86,6 +105,7 @@ services:
       - DASHBOARD__TELEMETRYLIMITS__MAXTRACECOUNT=150000
       - DASHBOARD__TELEMETRYLIMITS__MAXMETRICSCOUNT=100000
       - DASHBOARD__OTLP__CORS__ALLOWEDORIGINS=*
+    #      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
     volumes:
       - ${VOLUMES_PATH}/aspire-dashboard/DataProtection-Keys:/home/app/.aspnet/DataProtection-Keys
     networks:

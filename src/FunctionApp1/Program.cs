@@ -13,8 +13,10 @@ using Sentry.OpenTelemetry;
 using Shared.Observability;
 
 FunctionsApplicationBuilder builder = FunctionsApplication.CreateBuilder(args);
-string? sentryDsn = builder.Configuration.GetValue<string>("Sentry:Dsn");
+builder.ConfigureFunctionsWebApplication();
+builder.Configuration.AddUserSecrets<Program>();
 
+string? sentryDsn = builder.Configuration.GetValue<string>("Sentry:Dsn");
 if (!string.IsNullOrEmpty(sentryDsn))
 {
     builder.Services.Configure<SentryLoggingOptions>(builder.Configuration.GetSection("Sentry"));
@@ -23,8 +25,6 @@ if (!string.IsNullOrEmpty(sentryDsn))
         options.UseOpenTelemetry(); // <-- Configure Sentry to use OpenTelemetry trace information
     });
 }
-builder.ConfigureFunctionsWebApplication();
-builder.Configuration.AddUserSecrets<Program>();
 
 // Export OpenTelemetry data via OTLP, using env vars for the configuration
 OpenTelemetryBuilder otel = builder.Services.AddOpenTelemetry();

@@ -8,15 +8,15 @@ This is a simple project to demonstrate how to use Azure Container Apps with .NE
 
 - install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/)
-- [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local)
+- [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local). Current one `4.9.0+29aeab590e6c229a1a6631f6653df70f150f9f0e`
 - in the root directory, create the.env.dev file with
 
 ```.env.dev
 VOLUMES_PATH=~/Works/var/azure-container-apps
 HTTPS_CERT_PATH=~/Works/Training/AzureContainerApps/certs
-HTTPS_CERT_NAME_CRT=dev4.crt
-HTTPS_CERT_NAME_KEY=dev4.key
-HTTPS_CERT_NAME_PEM=dev4.pem
+HTTPS_CERT_NAME_CRT=dev.crt
+HTTPS_CERT_NAME_KEY=dev.key
+HTTPS_CERT_NAME_PEM=dev.pem
 DOTNET_ENVIRONMENT=Development
 
 FUNCTION_APP_1_IMAGE=my-func-app-1:1.0.0
@@ -55,6 +55,19 @@ az login
 az acr login -n myexampleacrtst
 ```
 
+### FunctionApp1 local secrets
+
+The repository ships `src/FunctionApp1/local.settings.template.json` as a reference for all required configuration keys. The real `local.settings.json` is git-ignored and must stay local-only.
+
+On first clone, copy the template:
+
+```bash
+cp src/FunctionApp1/local.settings.template.json src/FunctionApp1/local.settings.json
+```
+
+Keep Azure Functions host/runtime settings in `src/FunctionApp1/local.settings.json` (or provide them as environment variables visible to the Functions host). This includes keys required by triggers/bindings, such as `AzureWebJobsStorage`, because Azure Functions Core Tools/runtime does not read those values from [.NET user-secrets](https://learn.microsoft.com/en-us/aspnet/core/security/app-secrets).
+
+Use .NET user-secrets only for application settings that are read through the normal .NET configuration pipeline. Do **not** commit `local.settings.json`. When adding a new required setting, add the key (with an empty placeholder value) to `local.settings.template.json` and commit that file.
 We use [docker compose](https://docs.docker.com/compose/) to run dependencies.
 
 From a root directory of the project run commands:
@@ -88,7 +101,7 @@ official [docs](https://learn.microsoft.com/en-us/dotnet/core/additional-tools/s
 ```text
 #!/bin/bash
 
-PARENT="dev4"
+PARENT="dev"
 
 # Array of DNS entries
 DNS_ENTRIES=(
@@ -162,8 +175,8 @@ Install certs in your system
 rm -rf ~/.aspnet
 dotnet dev-certs https --trust --verbose
 
-sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/dev4.crt
-sudo security import certs/dev4.key -k /Library/Keychains/System.keychain
+sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain certs/dev.crt
+sudo security import certs/dev.key -k /Library/Keychains/System.keychain
 ```
 
 ## DevOps
@@ -177,13 +190,13 @@ In this section, we will build Docker images for the FunctionApp1 and HttpApi se
 - build FunctionApp1 image
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-func-app-1:1.0.0 -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key -t my-func-app-1:1.0.0 -f src/FunctionApp1/Dockerfile .
 ```
 
 - build HttpApi image
 
 ```bash
-docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key -t my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
+docker buildx build --platform linux/amd64,linux/arm64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key -t my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
 ```
 
 #### Build and push Docker images to Azure Container Registry (Optional)
@@ -201,7 +214,7 @@ az acr login -n myexampleacrtst
 Then, you can build and push the images using docker buildx
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --secret id=dev-crt,src=./certs/dev4.crt --secret id=dev-key,src=./certs/dev4.key --push -t myexampleacrtst.azurecr.io/my-func:1.0.0 -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key --push -t myexampleacrtst.azurecr.io/my-func:1.0.0 -f src/FunctionApp1/Dockerfile .
 ```
 
 ### Run to check is everything works with containers

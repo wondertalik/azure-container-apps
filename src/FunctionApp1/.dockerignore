@@ -14,6 +14,7 @@ obj/
 
 # Ignore local settings
 local.settings.json
+local.settings.template.json
 
 # Ignore other unnecessary files
 .vscode/

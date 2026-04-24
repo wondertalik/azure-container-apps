@@ -6,6 +6,7 @@ namespace HttpApi.Diagnostics;
 /// It is recommended to use a custom type to hold references for ActivitySource.
 /// This avoids possible type collisions with other components in the DI container.
 /// </summary>
+// ReSharper disable once ClassNeverInstantiated.Global
 public class HttpApiInstrumentation : IDisposable
 {
     public ActivitySource ActivitySource { get; } = new(nameof(HttpApiInstrumentation));

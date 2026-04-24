@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PARENT="dev4"
+PARENT="dev"
 
 # Array of DNS entries
 DNS_ENTRIES=(

@@ -1,20 +1,4 @@
 {
   "version": "2.0",
-  "logging": {
-    "applicationInsights": {
-      "samplingSettings": {
-        "isEnabled": true,
-        "maxTelemetryItemsPerSecond": 20,
-        "excludedTypes": "Request"
-      },
-      "enableLiveMetricsFilters": true
-    },
-    "logLevel": {
-      "default": "Warning",
-      "Host.Results": "Error",
-      "Function": "Information",
-      "Host.Aggregator": "Trace"
-    }
-  },
   "telemetryMode": "OpenTelemetry"
 }

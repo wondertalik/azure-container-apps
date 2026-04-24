@@ -1,4 +1,4 @@
-﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0.18 AS base
+﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0.26 AS base
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -9,8 +9,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Install SSL certificate and key using Docker secrets
+ARG CERT_HASH
 RUN --mount=type=secret,id=dev-crt,target=/tmp/dev.crt \
     --mount=type=secret,id=dev-key,target=/tmp/dev.key \
+    echo "cert-hash:${CERT_HASH}" && \
     mkdir -p /usr/local/share/dev && \
     cp /tmp/dev.crt /usr/local/share/ca-certificates/dev.crt && \
     cp /tmp/dev.key /usr/local/share/dev/dev.key && \
@@ -19,7 +21,7 @@ RUN --mount=type=secret,id=dev-crt,target=/tmp/dev.crt \
     cat /usr/local/share/ca-certificates/dev.crt >> /etc/ssl/certs/ca-certificates.crt && \
     update-ca-certificates
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.412 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.420 AS build
 ARG TARGETARCH
 ARG BUILD_CONFIGURATION=Release
 
