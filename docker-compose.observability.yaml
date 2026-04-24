@@ -57,7 +57,7 @@ services:
     container_name: seq
     environment:
       ACCEPT_EULA: Y
-      SEQ_FIRSTRUN_ADMINPASSWORD: admin
+      SEQ_FIRSTRUN_ADMINPASSWORD: ${SEQ_ADMIN_PASSWORD}
     volumes:
       - ${VOLUMES_PATH}/seq/data:/data
     #      - ./certs:/data/Certificates
