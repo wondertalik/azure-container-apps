@@ -46,8 +46,9 @@ internal sealed class ActionRepository(
     public async Task<DbAction> AddAsync(DbAction action, CancellationToken cancellationToken)
     {
         Container container = await containerProvider.GetContainerAsync();
-        return await container.CreateItemAsync(action, keysProvider.GetPartitionKey(action),
+        var response = await container.CreateItemAsync(action, keysProvider.GetPartitionKey(action),
             cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task DeleteAsync(string actionId, CancellationToken cancellationToken)

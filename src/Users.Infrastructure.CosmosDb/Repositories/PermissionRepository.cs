@@ -51,15 +51,17 @@ internal sealed class PermissionRepository(
         permission.DeletedAt = null;
         permission.DeletedBy = null;
         Container container = await containerProvider.GetContainerAsync();
-        return await container.CreateItemAsync(permission, keysProvider.GetPartitionKey(permission),
+        var response = await container.CreateItemAsync(permission, keysProvider.GetPartitionKey(permission),
             cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task<DbPermission> UpdateAsync(DbPermission permission, CancellationToken cancellationToken)
     {
         Container container = await containerProvider.GetContainerAsync();
-        return await container.ReplaceItemAsync(permission, permission.UserId, keysProvider.GetPartitionKey(permission),
+        var response = await container.ReplaceItemAsync(permission, permission.UserId, keysProvider.GetPartitionKey(permission),
             cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task DeleteAsync(string userId, string tenantId, Guid deletedBy, CancellationToken cancellationToken)

@@ -49,14 +49,16 @@ internal sealed class RoleRepository(
     {
         Container container = await containerProvider.GetContainerAsync();
         var pk = keysProvider.GetPartitionKey(role);
-        return await container.CreateItemAsync(role, pk, cancellationToken: cancellationToken);
+        var response = await container.CreateItemAsync(role, pk, cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task<DbRole> UpdateAsync(DbRole role, CancellationToken cancellationToken)
     {
         Container container = await containerProvider.GetContainerAsync();
         var pk = keysProvider.GetPartitionKey(role);
-        return await container.ReplaceItemAsync(role, role.RoleId, pk, cancellationToken: cancellationToken);
+        var response = await container.ReplaceItemAsync(role, role.RoleId, pk, cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task DeleteAsync(string roleId, string tenantId, CancellationToken cancellationToken)

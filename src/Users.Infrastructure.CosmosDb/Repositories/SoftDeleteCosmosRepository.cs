@@ -29,7 +29,8 @@ public abstract class SoftDeleteCosmosRepository<T>(
 
         Container container = await ContainerProvider.GetContainerAsync();
         PartitionKey pk = KeysProvider.GetPartitionKey(entity);
-        return await container.CreateItemAsync(entity, pk, cancellationToken: cancellationToken);
+        var response = await container.CreateItemAsync(entity, pk, cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task<IReadOnlyList<RecordsAffected>> AddMultipleAsync(
@@ -50,7 +51,8 @@ public abstract class SoftDeleteCosmosRepository<T>(
         Container container = await ContainerProvider.GetContainerAsync();
         string id = KeysProvider.GetPrimaryKey(entity);
         PartitionKey pk = KeysProvider.GetPartitionKey(entity);
-        return await container.ReplaceItemAsync(entity, id, pk, cancellationToken: cancellationToken);
+        var response = await container.ReplaceItemAsync(entity, id, pk, cancellationToken: cancellationToken);
+        return response.Resource;
     }
 
     public async Task<IReadOnlyList<RecordsAffected>> UpdateMultipleAsync(
