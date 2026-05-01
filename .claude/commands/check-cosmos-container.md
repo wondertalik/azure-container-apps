@@ -2,7 +2,7 @@ Query the local CosmosDB emulator and show the state of the users-db containers.
 
 Steps:
 1. Check emulator is running:
-   `docker ps --filter "name=cosmosdb-emulator" --format "{{.Status}}"`
+   `docker ps --filter "name=cosmosdb" --format "{{.Status}}"`
    Stop with an error message if not running.
 
 2. Load connection string from `.env.dev` (parse `COSMOSDB_CONNECTION_STRING` and `USERS_COSMOSDB_DATABASE`).
