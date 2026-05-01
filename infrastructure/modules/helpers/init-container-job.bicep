@@ -86,23 +86,23 @@ resource usersInitContainerJob 'Microsoft.App/jobs@2025-01-01' = {
               value: targetEnvironment == 'prd' ? 'Production' : 'Staging'
             }
             {
-              name: 'Users__CosmosDb__AccountEndpoint'
+              name: 'Users__UsersInfrastructureCosmosDbOptions__ConnectionString'
               value: cosmosDbEndpoint
             }
             {
-              name: 'Users__CosmosDb__DatabaseName'
+              name: 'Users__UsersInfrastructureCosmosDbOptions__DatabaseId'
               value: cosmosDbDatabaseName
             }
             {
-              name: 'Seeder__TenantsSeed'
+              name: 'SeederOptions__TenantsSeed'
               value: '${tenantsSeed}'
             }
             {
-              name: 'Seeder__UsersSeed'
+              name: 'SeederOptions__UsersSeed'
               value: '${usersSeed}'
             }
             {
-              name: 'Seeder__SeedDataFilePath'
+              name: 'SeederOptions__SeedDataFilePath'
               value: '/app/seed-data'
             }
             {
