@@ -12,7 +12,7 @@ public sealed record DbTenant : ICreatable, IUpdatable, ISoftDeletable, ILockabl
     [JsonProperty("id")]
     public required string TenantId { get; set; }
 
-    /// <summary>d
+    /// <summary>
     /// Name of Tenant
     /// </summary>
     [JsonProperty("name")]

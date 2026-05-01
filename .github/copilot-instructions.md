@@ -118,13 +118,16 @@ Action constants live in `Users.Authorization.Constants/Actions/` and are split 
 
 ### Migrations
 
-Implement `IMigration` with a date-prefixed version string and register it in `MigrationService` inside `DependencyInjection.AddUsersCosmosDb`:
+Migrations are extracted to a separate project (`Users.Infrastructure.CosmosDb.Migrations`). Implement `IMigration` with a date-time-prefixed version string and register it via `AddUsersCosmosDbMigrations()`:
 
 ```csharp
-svc.AddMigration(new V20250501_InitialSeed());
+// In Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs
+services.AddSingleton<IMigration, V20250501_202100_InitialSeed>();
 ```
 
 Naming convention: `V{yyyyMMdd}_{HHmmss}_{Description}`.
+
+The migration service is registered in `Users.Infrastructure.CosmosDb/DependencyInjection.cs` and resolves all `IMigration` implementations via constructor injection. Call `.ApplyUsersMigrationsAsync()` on the host to execute pending migrations in order by version.
 
 ### FunctionApp1 local settings
 
@@ -134,6 +137,10 @@ cp src/FunctionApp1/local.settings.template.json src/FunctionApp1/local.settings
 ```
 
 Functions host/binding settings (e.g., `AzureWebJobsStorage`) **must** go in `local.settings.json` — the Functions runtime does not read .NET user-secrets. Use .NET user-secrets only for application-level settings read through the standard `IConfiguration` pipeline. When adding a new required key, add a placeholder to `local.settings.template.json` and commit it.
+
+### Console app configuration (Users.InitContainer)
+
+Console applications must explicitly load user secrets by calling `builder.Configuration.AddUserSecrets<Program>()` after `Host.CreateApplicationBuilder(args)`. Unlike ASP.NET Core apps, user secrets are not auto-loaded based on environment. This is required for local development to resolve configuration from .NET user-secrets.
 
 ### Docker image builds
 

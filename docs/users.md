@@ -350,10 +350,11 @@ All interfaces live in `Users.Infrastructure.Contracts`. They are provider-agnos
 ```csharp
 public interface IRepository<TEntity, in TKey>
 {
-    Task<TEntity?> GetByIdAsync(TKey id, CancellationToken ct = default);
-    Task<TEntity> CreateAsync(TEntity entity, CancellationToken ct = default);
-    Task<TEntity> UpdateAsync(TEntity entity, CancellationToken ct = default);
-    Task DeleteAsync(TKey id, CancellationToken ct = default);
+    Task<TEntity?> GetAsync(TKey id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken);
+    Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken);
+    Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken);
+    Task DeleteAsync(TKey id, Guid deletedBy, CancellationToken cancellationToken);
 }
 ```
 
@@ -622,7 +623,7 @@ Files live in `Users.InitContainer.Data/SeedData/` and are copied to the output 
 ```csharp
 public sealed record SeederOptions
 {
-    public const string ConfigSectionName = "Seeder";
+    public const string ConfigSectionName = "SeederOptions";
 
     [Required] public required bool   TenantsSeed     { get; init; }
     [Required] public required bool   UsersSeed        { get; init; }
@@ -657,7 +658,6 @@ internal interface IMigration
 
 internal interface IMigrationService
 {
-    void AddMigration<TMigration>(TMigration migration) where TMigration : IMigration;
     Task ApplyMigrationsAsync(CancellationToken cancellationToken);
 }
 ```
@@ -665,6 +665,8 @@ internal interface IMigrationService
 `UpAsync` receives `IServiceProvider` so each migration can resolve the repositories it needs.
 
 ### `MigrationService` behaviour
+
+`MigrationService` is instantiated with `IEnumerable<IMigration>` resolved from DI. On each startup:
 
 1. Loads all applied versions from the `migrations` container
 2. Finds pending migrations (`Version` not in applied set)
@@ -704,13 +706,13 @@ All three are idempotent: existing documents are skipped.
 
 ### Adding a new migration
 
-1. Create `src/Users.Infrastructure.CosmosDb/Migrations/V{YYYYMMDD}_{HHMMSS}_{Description}.cs`
-2. Implement `IMigration` (internal sealed class)
-3. Register in `ServiceCollectionExtensions.cs`:
+1. Create `src/Users.Infrastructure.CosmosDb.Migrations/V{YYYYMMDD}_{HHMMSS}_{Description}.cs`
+2. Implement `IMigration` (public sealed class)
+3. Register in `Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs`:
    ```csharp
-   svc.AddMigration(new V20250601_120000_AddSomething());
+   services.AddSingleton<IMigration, V20250601_120000_AddSomething>();
    ```
-4. Run `Users.InitContainer` — migration applies automatically on next startup.
+4. The `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` in its composition root — all registered `IMigration` implementations are discovered and executed in version order on startup.
 
 ---
 
@@ -748,9 +750,9 @@ services:
       - Users__CosmosDb__ConnectionString=${COSMOSDB_CONNECTION_STRING}
       - Users__CosmosDb__DatabaseName=${USERS_COSMOSDB_DATABASE}
       - Users__CosmosDb__IgnoreSslCertificateValidation=true
-      - Seeder__TenantsSeed=true
-      - Seeder__UsersSeed=true
-      - Seeder__SeedDataFilePath=/app/seed-data/users-db
+      - SeederOptions__TenantsSeed=true
+      - SeederOptions__UsersSeed=true
+      - SeederOptions__SeedDataFilePath=/app/seed-data/users-db
     volumes:
       - ${SEED_DATA_PATH}:/app/seed-data
     networks:
