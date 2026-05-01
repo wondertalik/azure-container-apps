@@ -4,16 +4,19 @@
 
 This is the first phase (clarification + documentation + diagrams) for a new **Users management module** in the Azure Container Apps .NET 8 solution. No code will be written until this document and `docs/users.md` are approved.
 
-The module adds 6 projects to the existing solution under the "Users" solution folder (already declared in `AzureContainerApps.sln` with no projects):
+The module adds 9 projects to the existing solution under the "Users" solution folder:
 
 | Project | Purpose |
 |---|---|
-| `Users.Authorization.Constants` | Action ID string constants (no dependencies) |
+| `Users.Authorization.Constants` | Action ID string constants + `Root` system constants + `UsersCosmosDbConstants` |
+| `Users.Shared` | `TenantType` enum |
 | `Users.Infrastructure.Entities` | CosmosDB entity records |
-| `Users.Infrastructure.Contracts` | Repository interface definitions |
-| `Users.Infrastructure.CosmosDb` | CosmosDB implementation (`Microsoft.Azure.Cosmos`) |
-| `Users.InitContainer` | Console app — DB creation + seed (init container pattern) |
-| `Users.InitContainer.Data` | JSON seed data (embedded resources) |
+| `Users.Infrastructure.Contracts` | Repository interface definitions (+ `IUsersCosmosDbManagerRepository`) |
+| `Libraries.Shared.CosmosDb` | Reusable multi-database CosmosDB infrastructure (`CosmosDbConfigurator`, `AddCosmosDb()`) |
+| `Users.Infrastructure.CosmosDb` | CosmosDB repositories, options, migrations interfaces, DI wiring |
+| `Users.Infrastructure.CosmosDb.Migrations` | Concrete migration implementations (`V20250501_202100_InitialSeed`) |
+| `Users.InitContainer` | Console app — DB provisioning + seed |
+| `Users.InitContainer.Data` | Seed data files, seeders, `SeederOptions` |
 
 ---
 
@@ -223,16 +226,20 @@ public sealed record DbMigration
 }
 ```
 
-#### Where migration interfaces live
-`IMigration` and `IMigrationService` are **internal** to `Users.Infrastructure.CosmosDb` (they are CosmosDB implementation details, not domain contracts). Concrete migrations also live there.
+#### Where migration interfaces and implementations live
+
+`IMigration` is **public** so that `Users.Infrastructure.CosmosDb.Migrations` (and any future migration assembly) can implement it. `IMigrationService` remains **internal** — exposed to consumers only via `ApplyUsersMigrationsAsync`.
 
 ```
 Users.Infrastructure.CosmosDb/
   Migrations/
-    IMigration.cs                        ← internal interface
+    IMigration.cs                        ← public interface (implementable cross-assembly)
     IMigrationService.cs                 ← internal interface
-    MigrationService.cs                  ← internal sealed class
-    V20250501_000000_InitialSeed.cs      ← first concrete migration
+    MigrationService.cs                  ← internal sealed class (IEnumerable<IMigration> via DI)
+
+Users.Infrastructure.CosmosDb.Migrations/   ← separate project
+  V20250501_202100_InitialSeed.cs            ← first concrete migration
+  DependencyInjection.cs                     ← AddUsersCosmosDbMigrations()
 ```
 
 #### Version naming convention
@@ -241,13 +248,14 @@ Users.Infrastructure.CosmosDb/
 YYYYMMDD_HHMMSS_Description
 ```
 
-Example: `20250501_000000_InitialSeed`
+Example: `20250501_202100_InitialSeed`
 
 Always use the **UTC timestamp** of when the migration was created. Lexicographic sort on the version string guarantees chronological application order.
 
 #### `IMigration` interface
 ```csharp
-internal interface IMigration
+// public — cross-assembly implementable
+public interface IMigration
 {
     string Version { get; }
     Task UpAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken);
@@ -261,29 +269,26 @@ internal interface IMigration
 ```csharp
 internal interface IMigrationService
 {
-    void AddMigration<TMigration>(TMigration migration) where TMigration : IMigration;
     Task ApplyMigrationsAsync(CancellationToken cancellationToken);
 }
 ```
 
 #### `MigrationService` implementation
 
+`MigrationService` uses constructor injection — all `IMigration` singletons registered in DI are passed as `IEnumerable<IMigration>`:
+
 ```csharp
 internal sealed class MigrationService(
     IServiceProvider serviceProvider,
-    IMigrationRepository migrationsRepository,
+    IEnumerable<IMigration> migrations,
+    IMigrationRepository migrationRepository,
     ILogger<MigrationService> logger)
     : IMigrationService
 {
-    private readonly List<IMigration> _migrations = [];
-
-    public void AddMigration<TMigration>(TMigration migration) where TMigration : IMigration
-        => _migrations.Add(migration);
-
     public async Task ApplyMigrationsAsync(CancellationToken cancellationToken)
     {
-        var applied = await migrationsRepository.GetAllAsync(cancellationToken);
-        var pending = _migrations
+        var applied = await migrationRepository.GetAllAsync(cancellationToken);
+        var pending = migrations
             .Where(m => applied.All(a => a.Version != m.Version))
             .OrderBy(m => m.Version)
             .ToList();
@@ -293,12 +298,12 @@ internal sealed class MigrationService(
         logger.LogInformation("{Count} migration(s) pending", pending.Count);
         foreach (var migration in pending)
         {
-            logger.LogInformation("Applying {Version}", migration.Version);
+            logger.LogInformation("Applying migration {Version}", migration.Version);
             await migration.UpAsync(serviceProvider, cancellationToken);
-            await migrationsRepository.AddAsync(
+            await migrationRepository.AddAsync(
                 new DbMigration { Id = Guid.NewGuid().ToString(), Version = migration.Version },
                 cancellationToken);
-            logger.LogInformation("Applied {Version}", migration.Version);
+            logger.LogInformation("Migration {Version} applied", migration.Version);
         }
     }
 }
@@ -329,61 +334,66 @@ await app.ApplyUsersMigrationsAsync(CancellationToken.None);
 
 #### DI registration
 
-In `ServiceCollectionExtensions.cs`, migrations are registered as part of `AddUsersCosmosDb`:
+Migrations are registered **separately** from the infrastructure, in `Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs`:
 
 ```csharp
-services.AddSingleton<IMigrationService>(sp =>
+// Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs
+public static IServiceCollection AddUsersCosmosDbMigrations(this IServiceCollection services)
 {
-    var svc = new MigrationService(
-        sp,
-        sp.GetRequiredService<IMigrationRepository>(),
-        sp.GetRequiredService<ILogger<MigrationService>>());
-    svc.AddMigration(new V20250501_000000_InitialSeed());
-    return svc;
-});
-```
-
-#### First migration: `V20250501_000000_InitialSeed`
-
-Creates the bootstrap data that every new deployment needs:
-
-**Root tenant** (well-known fixed GUID for reproducibility):
-```
-TenantId  = "10000000-0000-0000-0000-000000000001"
-Name      = "Root"
-TenantType = Node
-ParentId  = "00000000-0000-0000-0000-000000000000"  ← Guid.Empty = no parent
-ChildIds  = []
-```
-
-**`Users.Authorization.Constants` project** — zero-dependency project at `src/Users.Authorization.Constants/` containing action ID string constants:
-
-```csharp
-// src/Users.Authorization.Constants/Actions/UserManagementActions.cs
-namespace Users.Authorization.Constants.Actions;
-
-public static class UserManagementActions
-{
-    public const string TenantsView               = "Tenants.View";
-    public const string ModuleUsers               = "Module.Users";
-    public const string UsersView                 = "Users.View";
-    public const string UsersViewAllTenants       = "Users.View.AllTenants";
-    public const string UsersAdd                  = "Users.Add";
-    public const string UsersAddAllTenants        = "Users.Add.AllTenants";
-    public const string UsersEdit                 = "Users.Edit";
-    public const string UsersEditAllTenants       = "Users.Edit.AllTenants";
-    public const string UsersAssignExplicitActions = "Users.AssignExplicitActions";
-    public const string UsersAssignRoles          = "Users.AssignRoles";
-    public const string UsersDelete               = "Users.Delete";
-    public const string UsersDeleteAllTenants     = "Users.Delete.AllTenants";
-    public const string UsersEditOwnProfile       = "Users.EditOwnProfile";
-    public const string AuthGetRoles              = "Auth.GetRoles";
-    public const string AuthGetRolesAllTenants    = "Auth.GetRoles.AllTenants";
-    public const string AuthGetActions            = "Auth.GetActions";
+    services.AddSingleton<IMigration, V20250501_202100_InitialSeed>();
+    return services;
 }
 ```
 
-`Users.Authorization.Constants` has no project references; it is referenced by `Users.Infrastructure.CosmosDb` (for migrations) and later by `HttpApi` / `FunctionApp1` (for authorization policy definitions).
+`MigrationService` receives all registered `IMigration` singletons via `IEnumerable<IMigration>` constructor injection. Adding a new migration = add one `AddSingleton<IMigration, ...>` call.
+
+#### First migration: `V20250501_202100_InitialSeed`
+
+Creates the bootstrap data that every new deployment needs. All well-known IDs come from `Root` in `Users.Authorization.Constants`:
+
+```csharp
+public static class Root
+{
+    public static readonly Guid   SystemId         = Guid.Empty;
+    public static readonly string TenantId         = "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c";
+    public static readonly string SuperAdminRoleId = "a50fcd0f-e253-41eb-98b3-ef02bbde476e";
+}
+```
+
+**Root tenant:**
+```
+TenantId  = Root.TenantId  ("9d6e73c7-...")
+Name      = "Root"
+TenantType = Node
+ParentId  = Root.SystemId.ToString()   ← "00000000-..." = no parent
+```
+
+**`Users.Authorization.Constants` project** — action IDs are split into three focused classes:
+
+```csharp
+// Actions/TenantActions.cs
+public static class TenantActions { public const string TenantsView = "Tenants.View"; }
+
+// Actions/UserActions.cs
+public static class UserActions
+{
+    public const string ModuleUsers = "Module.Users";
+    public const string UsersView = "Users.View";
+    // ... 10 more
+}
+
+// Actions/AuthActions.cs
+public static class AuthActions
+{
+    public const string AuthGetRoles = "Auth.GetRoles";
+    public const string AuthGetRolesAllTenants = "Auth.GetRoles.AllTenants";
+    public const string AuthGetActions = "Auth.GetActions";
+}
+```
+
+Also contains `Root.cs` (system constants) and `UsersCosmosDbConstants.cs` (container names + partition key paths as typed `ContainerOptions` records).
+
+`Users.Authorization.Constants` has no project references; it is referenced by `Users.Infrastructure.CosmosDb.Migrations` (for migration constants) and later by `HttpApi` / `FunctionApp1` (for authorization policy definitions).
 
 **Initial actions** (ActionId = the constant string value; document `id` = action string):
 
@@ -528,31 +538,29 @@ Wire all three into `infrastructure/main.bicep` with `dependsOn` ordering, behin
 
 ## Phase 2 Output: Project Scaffold (After docs/users.md Approval)
 
-### Disk Layout
+### Disk Layout (as-built)
 
 ```
 src/
   Users.Authorization.Constants/
     Users.Authorization.Constants.csproj   ← no project refs, no NuGet deps
+    Root.cs                                ← SystemId, TenantId, SuperAdminRoleId constants
+    UsersCosmosDbConstants.cs              ← container names + partition key paths as ContainerOptions records
     Actions/
-      UserManagementActions.cs             ← 16 action ID string constants
+      TenantActions.cs                     ← TenantsView
+      UserActions.cs                       ← 13 user-management action IDs
+      AuthActions.cs                       ← AuthGetRoles, AuthGetRolesAllTenants, AuthGetActions
 
   Users.Infrastructure.Entities/
     Users.Infrastructure.Entities.csproj
     Models/
-      DbUsers/
-        DbUser.cs                          ← implements ICreatable, IUpdatable, ISoftDeletable, ILockable
-      DbTenants/
-        DbTenant.cs
-      DbRoles/
-        DbRole.cs
-      DbActions/
-        DbAction.cs                        ← no soft-delete; hard delete only
-      DbPermissions/
-        DbPermission.cs
-        DbRoleAssignment.cs               ← sealed record with ValidFrom/ValidTo
-      DbMigrations/
-        DbMigration.cs                    ← public sealed record
+      DbUsers/DbUser.cs
+      DbTenants/DbTenant.cs
+      DbRoles/DbRole.cs
+      DbActions/DbAction.cs               ← public; no soft-delete
+      DbPermissions/DbPermission.cs
+      DbPermissions/DbRoleAssignment.cs   ← sealed record; ValidFrom/ValidTo
+      DbMigrations/DbMigration.cs         ← public sealed record
 
   Users.Infrastructure.Contracts/
     Users.Infrastructure.Contracts.csproj
@@ -560,44 +568,58 @@ src/
       IRepository.cs
       IUserRepository.cs
       ITenantRepository.cs
-      IRoleRepository.cs                  ← no generic base (composite partition key)
-      IActionRepository.cs               ← no generic base (no soft-delete)
-      IPermissionRepository.cs           ← no generic base (composite partition key)
-      IMigrationRepository.cs            ← GetAllAsync + AddAsync
+      IRoleRepository.cs
+      IActionRepository.cs
+      IPermissionRepository.cs
+      IMigrationRepository.cs
+      IUsersCosmosDbManagerRepository.cs  ← CreateDatabaseIfNotExistsAsync / DropDatabaseIfExistsAsync
+
+  Libraries.Shared.CosmosDb/
+    Libraries.Shared.CosmosDb.csproj
+    Configuration/
+      ICosmosDbContainerProvider.cs       ← generic typed container handle
+      ICosmosDbKeysProvider.cs            ← partition key + primary key selectors
+      CosmosDbConfigurator.cs             ← multi-database registry (CosmosDbReference keyed dict)
+      CosmosDbClientProvider.cs           ← creates CosmosClient per database
+      CosmosDbContainerProvider.cs        ← Lazy<Task<Container>>
+      CosmosDbContainerBuilder.cs         ← fluent per-container configuration
+      CosmosDbContainerOptions.cs         ← per-container name + key selectors
+      CosmosDbDatabaseOptions.cs          ← connection, throughput, TLS, container builder
+      CosmosDbKeysProvider.cs
+      CosmosDbReference.cs                ← (ConnectionString, DatabaseId) equality key
+      ICosmosDbContainerOptions.cs
+    ServicesExtensions.cs                 ← AddCosmosDb()
 
   Users.Infrastructure.CosmosDb/
     Users.Infrastructure.CosmosDb.csproj
-    Configuration/
-      ICosmosDbContainerProvider.cs
-      ICosmosDbKeysProvider.cs
-      CosmosDbConfigurator.cs
-      CosmosDbContainerOptions.cs
-      CosmosDbContainerBuilder.cs
-      CosmosDbDatabaseOptions.cs
-      CosmosDbClientProvider.cs          ← internal; creates CosmosClient
-      CosmosDbContainerProvider.cs       ← internal; Lazy<Task<Container>>
-      CosmosDbKeysProvider.cs            ← internal
     Options/
-      CosmosDbOptions.cs
+      UsersInfrastructureCosmosDbOptions.cs  ← ConnectionString, DatabaseId, Throughput, UseIntegratedCache, TLS
     Repositories/
-      SoftDeleteCosmosRepository.cs      ← abstract base for entities with ISoftDeletable
+      SoftDeleteCosmosRepository.cs       ← abstract base for ISoftDeletable entities
       UserRepository.cs
       TenantRepository.cs
-      RoleRepository.cs                  ← direct CosmosDB (composite key)
-      ActionRepository.cs               ← direct CosmosDB (no soft-delete)
-      PermissionRepository.cs           ← direct CosmosDB (composite key)
-      MigrationRepository.cs            ← no soft-delete; wraps migrations container
+      RoleRepository.cs
+      ActionRepository.cs
+      PermissionRepository.cs
+      MigrationRepository.cs
+      UsersCosmosDbManagerRepository.cs   ← implements IUsersCosmosDbManagerRepository
     Migrations/
-      IMigration.cs                      ← internal
-      IMigrationService.cs              ← internal
-      MigrationService.cs               ← internal sealed
-      V20250501_000000_InitialSeed.cs
+      IMigration.cs                       ← public interface
+      IMigrationService.cs                ← internal interface
+      MigrationService.cs                 ← internal sealed; IEnumerable<IMigration> via DI
+    CosmosDbExtensions.cs                 ← UseUsersCosmosDb(IHost) + ConfigureUsersCosmosDb(IServiceProvider)
     Extensions/
-      ServiceCollectionExtensions.cs     ← AddUsersCosmosDb(), UseUsersCosmosDbAsync(), ApplyUsersMigrationsAsync()
+      HostExtensions.cs                   ← UseUsersCosmosDbAsync / ApplyUsersMigrationsAsync
+    DependencyInjection.cs                ← AddUsersCosmosDb(IConfiguration)
+
+  Users.Infrastructure.CosmosDb.Migrations/
+    Users.Infrastructure.CosmosDb.Migrations.csproj
+    V20250501_202100_InitialSeed.cs       ← actions + Super Admin role + Root tenant
+    DependencyInjection.cs               ← AddUsersCosmosDbMigrations()
 
   Users.InitContainer/
     Users.InitContainer.csproj           ← OutputType=Exe
-    Program.cs                           ← 4-phase init
+    Program.cs                           ← 3-phase: DB create → migrations → seeders
     Dockerfile
     entrypoint.sh
     Diagnostics/
@@ -608,38 +630,40 @@ src/
   Users.InitContainer.Data/
     Users.InitContainer.Data.csproj
     Options/
-      SeederOptions.cs
+      SeederOptions.cs                   ← ConfigSectionName = "SeederOptions"
     Models/
       SeedPermission.cs
       SeedRoleAssignment.cs
     Seeders/
-      TenantSeeder.cs                    ← builds tree, processes parent-before-child
-      UserSeeder.cs                      ← discovers email dirs, resolves roles, creates user + permissions
-    ServiceCollectionExtensions.cs
+      TenantSeeder.cs
+      UserSeeder.cs
+    DependencyInjection.cs               ← AddUsersInitContainerData()
     SeedData/
       users-db/
-        tenants.json                     ← flat array; seeder builds tree
+        tenants.json
         users/
           {user@email.com}/
-            user.json                    ← DbUser document
-            permissions.json            ← REQUIRED; array of { tenantId, roleAssignments[] }
+            user.json
+            permissions.json             ← REQUIRED per user
 ```
 
-### Project Dependency Graph
+### Project Dependency Graph (as-built)
 
 ```
-Users.Authorization.Constants       ← zero dependencies; action ID string constants
+Users.Authorization.Constants          ← zero deps; action IDs, Root, UsersCosmosDbConstants
 
-Libraries.Shared                    ← ICurrentDateTimeService + ServiceOptionsExtensions
-  └── Users.Shared                  ← TenantType enum
+Libraries.Shared                       ← ICurrentDateTimeService + ServiceOptionsExtensions
+  └── Libraries.Shared.CosmosDb        ← AddCosmosDb(); CosmosDbConfigurator; typed providers
+  └── Users.Shared                     ← TenantType enum
         └── Users.Infrastructure.Entities
               └── Users.Infrastructure.Contracts
-                    └── Users.Infrastructure.CosmosDb   [+ Microsoft.Azure.Cosmos 3.46.0
-                        │   + Users.Authorization.Constants   + Newtonsoft.Json 13.0.4
-                        │                                     + Azure.Identity
-                        │                                     + System.Linq.Dynamic.Core 1.6.0]
-                          └── Users.InitContainer       [+ Users.InitContainer.Data]
-                               └── Users.InitContainer.Data
+                    └── Users.Infrastructure.CosmosDb          [+ Microsoft.Azure.Cosmos
+                    │     + Users.Authorization.Constants        + Newtonsoft.Json
+                    │     + Libraries.Shared.CosmosDb            + Azure.Identity
+                    │                                            + System.Linq.Dynamic.Core]
+                    │         └── Users.Infrastructure.CosmosDb.Migrations
+                    │               └── Users.InitContainer    [+ Users.InitContainer.Data]
+                    └── (HttpApi / FunctionApp1 call AddUsersCosmosDb + AddUsersCosmosDbMigrations)
 ```
 
 ### Key csproj Details
@@ -757,7 +781,7 @@ This is a **core architectural guarantee** of the module structure. No consumer 
 
 ## Verification
 
-1. `dotnet build` passes for all 7 Users projects (0 errors)
+1. ✅ `dotnet build` passes for all 9 Users projects (0 errors) — verified 2026-05-01
 2. `docker compose -f docker-compose.yaml -f docker-compose.cosmosdb.yaml --env-file .env.dev up` starts emulator healthy
 3. `users-init-container` service exits with code 0
 4. Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 6 containers (`users`, `tenants`, `roles`, `actions`, `permissions`, `migrations`) and migration seed data

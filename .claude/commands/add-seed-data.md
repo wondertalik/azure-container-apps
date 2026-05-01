@@ -3,7 +3,7 @@ Add seed data for the Users module interactively.
 Usage: /add-seed-data <type>
 Types: user, tenant, role, action
 
-The seed data root is: `src/Users/Users.InitContainer.Data/SeedData/users-db/`
+The seed data root is: `src/Users.InitContainer.Data/SeedData/users-db/`
 
 For `user`:
 1. Ask for: email, firstname, lastname, userId (GUID, generate if not provided), defaultTenantId (optional).
@@ -23,4 +23,4 @@ For `action`:
 1. Ask for: name, actionId (suggest `{domain}:{verb}` format, e.g. `users:read`).
 2. Append to `actions.json`.
 
-After writing, run `dotnet build src/Users/Users.InitContainer.Data/Users.InitContainer.Data.csproj --no-restore -v q` to verify JSON is valid (build copies files to output).
+After writing, run `dotnet build src/Users.InitContainer.Data/Users.InitContainer.Data.csproj --no-restore -v q` to verify the project still compiles (the build copies JSON files to output via CopyToOutputDirectory).

@@ -23,8 +23,11 @@ dotnet test tests/HttpApi.IntegrationTests
 # Start observability stack + core services (Azurite, Jaeger, Prometheus, Seq, Aspire Dashboard, OTEL Collector)
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
 
-# Add containerized services
-docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
+# Add CosmosDB emulator + Users init container
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.cosmosdb.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
+
+# Add all containerized services
+docker compose -f docker-compose.yaml -f docker-compose.observability.yaml -f docker-compose.cosmosdb.yaml -f docker-compose.func-app-1.yaml -f docker-compose.httpapi.yaml --env-file .env.dev -p my-container-apps up --build --remove-orphans
 
 # Teardown
 docker compose -f docker-compose.yaml -f docker-compose.observability.yaml --env-file .env.dev -p my-container-apps down
@@ -47,6 +50,11 @@ docker buildx build --platform linux/amd64,linux/arm64 --progress plain \
   --secret id=dev-crt,src=./certs/dev.crt \
   --secret id=dev-key,src=./certs/dev.key \
   -t my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
+
+# Users.InitContainer
+docker buildx build --platform linux/amd64 --progress plain \
+  --build-arg BUILD_CONFIGURATION=Release \
+  -t users-init-container:1.0.0 -f src/Users.InitContainer/Dockerfile .
 ```
 
 ### First-Time Setup
@@ -71,6 +79,36 @@ docker buildx build --platform linux/amd64,linux/arm64 --progress plain \
 - **Libraries.Shared.CosmosDb** (`src/Libraries.Shared.CosmosDb/`) — Reusable multi-database CosmosDB infrastructure
   (`CosmosDbConfigurator`, `CosmosDbClientProvider`, container/keys providers). Any module that needs CosmosDB references this
   project and calls `services.AddCosmosDb()`.
+
+### Users Module
+
+Multi-tenant identity and RBAC management backed by Azure Cosmos DB NoSQL (`users-db`). Nine projects:
+
+| Project | Purpose |
+|---|---|
+| `Users.Authorization.Constants` | Action ID constants (`TenantActions`, `UserActions`, `AuthActions`), `Root` system constants, `UsersCosmosDbConstants` |
+| `Users.Shared` | `TenantType` enum |
+| `Users.Infrastructure.Entities` | CosmosDB document records (`DbUser`, `DbTenant`, `DbRole`, `DbAction`, `DbPermission`, `DbMigration`) |
+| `Users.Infrastructure.Contracts` | Provider-agnostic repository interfaces + `IUsersCosmosDbManagerRepository` |
+| `Users.Infrastructure.CosmosDb` | Repositories, options, migration service, DI wiring (`AddUsersCosmosDb`, `UseUsersCosmosDb`) |
+| `Users.Infrastructure.CosmosDb.Migrations` | Concrete migrations (`V20250501_202100_InitialSeed`), `AddUsersCosmosDbMigrations` |
+| `Users.InitContainer` | Console app — DB provisioning + migration + seed (runs as Container Apps Job) |
+| `Users.InitContainer.Data` | Seeders, `SeederOptions`, JSON seed files in `SeedData/users-db/` |
+
+**Key init sequence** (in `Users.InitContainer/Program.cs`):
+```
+AddUsersCosmosDb() + AddUsersCosmosDbMigrations()
+  → app.UseUsersCosmosDb()                         ← wires container config (sync)
+  → manager.CreateDatabaseIfNotExistsAsync()        ← creates DB + 6 containers
+  → app.ApplyUsersMigrationsAsync()                 ← runs pending migrations
+  → TenantSeeder + UserSeeder                       ← seeds reference data
+```
+
+**Config section**: `Users:UsersInfrastructureCosmosDbOptions` — requires `ConnectionString`, `DatabaseId`, `Throughput`, `UseIntegratedCache`. Set via .NET user secrets for local development.
+
+**Local emulator**: Parallels Desktop CosmosDB emulator at `localhost:8081` (`IgnoreSslCertificateValidation: false`). Docker Linux emulator requires `IgnoreSslCertificateValidation: true`.
+
+**Slash commands** for development tasks: `/scaffold-cosmos-repository`, `/run-users-init-container`, `/add-seed-data`, `/check-cosmos-container`.
 
 ### Observability Pipeline
 

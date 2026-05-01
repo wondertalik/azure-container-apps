@@ -20,10 +20,13 @@ other persistence technology without touching consumers.
 
 ```
 src/
+  Users.Authorization.Constants/       Action ID string constants + system-level constants (Root)
   Users.Shared/                        Enums shared across all Users projects
   Users.Infrastructure.Entities/       CosmosDB document records
   Users.Infrastructure.Contracts/      Repository interfaces (provider-agnostic)
-  Users.Infrastructure.CosmosDb/       CosmosDB implementation
+  Libraries.Shared.CosmosDb/           Reusable multi-database CosmosDB infrastructure
+  Users.Infrastructure.CosmosDb/       CosmosDB implementation (repositories, DI wiring)
+  Users.Infrastructure.CosmosDb.Migrations/  Concrete migration implementations
   Users.InitContainer/                 Console app — DB provisioning + seed
   Users.InitContainer.Data/            Seed data files (JSON, per-email directories)
 ```
@@ -31,15 +34,20 @@ src/
 ### Dependency Graph
 
 ```
-Libraries.Shared  ──────────────────────────────────────────────────────┐
-  └── Users.Shared                                                       │
-        └── Users.Infrastructure.Entities  ──────────────────────────── │
-              └── Users.Infrastructure.Contracts                         │
-                    └── Users.Infrastructure.CosmosDb ← Microsoft.Azure.Cosmos
-                          └── Users.InitContainer ← Users.InitContainer.Data
+Users.Authorization.Constants          ← zero dependencies; action IDs + Root constants
+
+Libraries.Shared
+  └── Libraries.Shared.CosmosDb        ← multi-database CosmosDB infrastructure
+  └── Users.Shared
+        └── Users.Infrastructure.Entities
+              └── Users.Infrastructure.Contracts
+                    └── Users.Infrastructure.CosmosDb  ← Microsoft.Azure.Cosmos
+                    │     └── Users.Infrastructure.CosmosDb.Migrations
+                    │           └── Users.InitContainer ← Users.InitContainer.Data
+                    └── (HttpApi / FunctionApp1 reference Contracts + CosmosDb + Migrations)
 ```
 
-`HttpApi` and `FunctionApp1` reference `Users.Infrastructure.Contracts` + `Users.Infrastructure.CosmosDb` only.
+`HttpApi` and `FunctionApp1` call `services.AddUsersCosmosDb()` + `services.AddUsersCosmosDbMigrations()`. They never reference CosmosDB SDK types directly.
 
 ---
 
@@ -440,13 +448,19 @@ public interface IPermissionRepository
 ### Architecture
 
 ```
-Users.Infrastructure.CosmosDb/
+Libraries.Shared.CosmosDb/
   Configuration/
     ICosmosDbContainerProvider<T>    Typed container handle per entity
     ICosmosDbKeysProvider<T>         Partition key + primary key resolution per entity
-    CosmosDbConfigurator             Fluent DI builder
+    CosmosDbConfigurator             Multi-database registry (keyed by CosmosDbReference)
+    CosmosDbClientProvider           Creates CosmosClient from connection string / managed identity
+    CosmosDbContainerBuilder         Fluent per-container configuration
+    CosmosDbDatabaseOptions          Per-database options (connection, throughput, TLS)
+  ServicesExtensions                 AddCosmosDb() — registers all shared infrastructure singletons
+
+Users.Infrastructure.CosmosDb/
   Options/
-    CosmosDbOptions                  Connection, database name, TLS flag
+    UsersInfrastructureCosmosDbOptions   ConnectionString, DatabaseId, Throughput, UseIntegratedCache, TLS
   Repositories/
     SoftDeleteCosmosRepository<T>    Generic base — CRUD, soft delete, batch, patch
     UserRepository
@@ -454,8 +468,20 @@ Users.Infrastructure.CosmosDb/
     RoleRepository
     ActionRepository
     PermissionRepository
+    MigrationRepository
+    UsersCosmosDbManagerRepository   CreateDatabaseIfNotExistsAsync / DropDatabaseIfExistsAsync
+  Migrations/
+    IMigration                       public interface — Version + UpAsync
+    IMigrationService                internal interface — ApplyMigrationsAsync
+    MigrationService                 internal; discovers all IMigration from IEnumerable<IMigration>
+  CosmosDbExtensions                 UseUsersCosmosDb(IHost) — wires container config into configurator
   Extensions/
-    ServiceCollectionExtensions      AddUsersCosmosDb(IConfiguration)
+    HostExtensions                   UseUsersCosmosDbAsync / ApplyUsersMigrationsAsync
+  DependencyInjection                AddUsersCosmosDb(IConfiguration)
+
+Users.Infrastructure.CosmosDb.Migrations/
+  V20250501_202100_InitialSeed       First concrete migration (actions, Super Admin role, Root tenant)
+  DependencyInjection                AddUsersCosmosDbMigrations() — registers IMigration implementations
 ```
 
 ### `SoftDeleteCosmosRepository<T>` Capabilities
@@ -479,31 +505,39 @@ All queries automatically exclude soft-deleted documents unless using the `Inclu
 ### Options Record
 
 ```csharp
-public sealed record CosmosDbOptions
+public sealed record UsersInfrastructureCosmosDbOptions
 {
-    public const string ConfigSectionName = "Users:CosmosDb";
+    public const string ConfigSectionName = "Users:UsersInfrastructureCosmosDbOptions";
 
-    [Required] public required string AccountEndpoint { get; init; }
-    [Required] public required string DatabaseName    { get; init; }
+    [Required] public required string ConnectionString { get; init; }
+    [Required] public required string DatabaseId       { get; init; }
+    [Required] public required int    Throughput       { get; init; }
+    [Required] public required bool   UseIntegratedCache { get; init; }
 
-    public string? ConnectionString              { get; init; }  // overrides for local emulator
-    public bool    IgnoreSslCertificateValidation { get; init; } // local emulator TLS bypass
+    public bool IgnoreSslCertificateValidation { get; init; }  // set true for Docker Linux emulator
 }
 ```
+
+For the Parallels Desktop CosmosDB emulator, `IgnoreSslCertificateValidation` should remain `false` (certificates are trusted on the host). For the Docker Linux emulator, set it to `true`.
 
 ### DI Registration
 
 ```csharp
-// In Program.cs or DiCompositor.cs
-services.AddOptionsAndValidateOnStart<CosmosDbOptions>(configuration, CosmosDbOptions.ConfigSectionName);
-services.AddUsersCosmosDb(configuration);
+// In Program.cs (InitContainer) or DiCompositor.cs (HttpApi / FunctionApp1)
+services.AddUsersCosmosDb(configuration);           // registers options + repositories + migration service
+services.AddUsersCosmosDbMigrations();              // registers all IMigration implementations
 
-// After app.Build() — creates DB + containers before first request
-await app.UseUsersCosmosDbAsync();
+// After app.Build():
+app.UseUsersCosmosDb();                             // wires container config into CosmosDbConfigurator (sync)
+
+// Then explicitly via IUsersCosmosDbManagerRepository:
+await manager.CreateDatabaseIfNotExistsAsync();     // creates DB + containers
+
+// Run pending migrations:
+await app.ApplyUsersMigrationsAsync();
 ```
 
-`AddUsersCosmosDb` registers a `CosmosClient` singleton (Managed Identity in Azure, connection string for local emulator) and one
-`ICosmosDbContainerProvider<T>` + `ICosmosDbKeysProvider<T>` per entity.
+`AddUsersCosmosDb` calls `AddCosmosDb()` from `Libraries.Shared.CosmosDb` (registers shared infra singletons) then adds options, repositories, and `IMigrationService`. Container configuration is registered at run time via `UseUsersCosmosDb()` — this populates the `CosmosDbConfigurator` with per-entity container bindings before any DB operations run.
 
 ### Serialization
 
@@ -647,15 +681,19 @@ Schema and data migrations run exactly once per environment. Applied versions ar
 
 No soft-delete — migrations are permanent records.
 
-### Interfaces (internal to `Users.Infrastructure.CosmosDb`)
+### Interfaces
+
+`IMigration` is **public** (lives in `Users.Infrastructure.CosmosDb`) so that `Users.Infrastructure.CosmosDb.Migrations` and future migration assemblies can implement it. `IMigrationService` is **internal** — exposed to consumers only via the `ApplyUsersMigrationsAsync` extension method.
 
 ```csharp
-internal interface IMigration
+// public — implementable from any project referencing Users.Infrastructure.CosmosDb
+public interface IMigration
 {
     string Version { get; }   // sort key and uniqueness key — format: YYYYMMDD_HHMMSS_Description
     Task UpAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken);
 }
 
+// internal — consumers use app.ApplyUsersMigrationsAsync() extension instead
 internal interface IMigrationService
 {
     Task ApplyMigrationsAsync(CancellationToken cancellationToken);
@@ -666,7 +704,7 @@ internal interface IMigrationService
 
 ### `MigrationService` behaviour
 
-`MigrationService` is instantiated with `IEnumerable<IMigration>` resolved from DI. On each startup:
+`MigrationService` receives `IEnumerable<IMigration>` via constructor injection — all registered `IMigration` singletons are discovered automatically. On each startup:
 
 1. Loads all applied versions from the `migrations` container
 2. Finds pending migrations (`Version` not in applied set)
@@ -688,31 +726,46 @@ await app.ApplyUsersMigrationsAsync(CancellationToken.None);
 V{YYYYMMDD}_{HHMMSS}_{Description}
 ```
 
-Example: `V20250501_000000_InitialSeed`
+Example: `V20250501_202100_InitialSeed`
 
 Always use the **UTC timestamp** of when the migration was created. The `V` prefix and underscores are required for lexicographic sort correctness.
 
-### First migration: `V20250501_000000_InitialSeed`
+### System-level constants (`Root` class)
 
-Seeds the minimum bootstrap data that every new deployment needs:
+Fixed GUIDs and IDs used by migrations and seed data are centralized in `Users.Authorization.Constants/Root.cs`:
 
-| Type   | Details |
-|--------|---------|
-| Root tenant | `TenantId = 10000000-0000-0000-0000-000000000001`, `Name = "Root"`, `TenantType = Node`, `ParentId = Guid.Empty` |
-| 16 actions | All action IDs from `UserManagementActions` — `Tenants.View`, `Module.Users`, `Users.View`, … |
-| Super Admin role | `RoleId = a50fcd0f-e253-41eb-98b3-ef02bbde476e`, `Name = "Super Admin"`, `TenantId = Guid.Empty` (global), all 16 action IDs |
+```csharp
+public static class Root
+{
+    public static readonly Guid   SystemId       = Guid.Empty;
+    public static readonly string TenantId       = "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c";
+    public static readonly string SuperAdminRoleId = "a50fcd0f-e253-41eb-98b3-ef02bbde476e";
+}
+```
+
+Using well-known fixed values ensures migrations are reproducible and idempotent across environments.
+
+### First migration: `V20250501_202100_InitialSeed`
+
+Seeds the minimum bootstrap data that every new deployment needs. Located in `Users.Infrastructure.CosmosDb.Migrations`.
+
+| Type | Details |
+|------|---------|
+| Root tenant | `TenantId = Root.TenantId` (`9d6e73c7-...`), `Name = "Root"`, `TenantType = Node`, `ParentId = Root.SystemId` |
+| 16 actions | All action IDs from `TenantActions`, `UserActions`, `AuthActions` |
+| Super Admin role | `RoleId = Root.SuperAdminRoleId`, `Name = "Super Admin"`, `TenantId = Root.SystemId` (global), all 16 action IDs |
 
 All three are idempotent: existing documents are skipped.
 
 ### Adding a new migration
 
 1. Create `src/Users.Infrastructure.CosmosDb.Migrations/V{YYYYMMDD}_{HHMMSS}_{Description}.cs`
-2. Implement `IMigration` (public sealed class)
+2. Implement `IMigration` from `Users.Infrastructure.CosmosDb` as `internal sealed class`
 3. Register in `Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs`:
    ```csharp
    services.AddSingleton<IMigration, V20250601_120000_AddSomething>();
    ```
-4. The `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` in its composition root — all registered `IMigration` implementations are discovered and executed in version order on startup.
+4. `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` — all registered `IMigration` singletons are injected into `MigrationService` as `IEnumerable<IMigration>` and executed in version order on startup.
 
 ---
 
@@ -747,9 +800,12 @@ services:
       cosmosdb-emulator:
         condition: service_healthy
     environment:
-      - Users__CosmosDb__ConnectionString=${COSMOSDB_CONNECTION_STRING}
-      - Users__CosmosDb__DatabaseName=${USERS_COSMOSDB_DATABASE}
-      - Users__CosmosDb__IgnoreSslCertificateValidation=true
+      - Users__UsersInfrastructureCosmosDbOptions__ConnectionString=${COSMOSDB_CONNECTION_STRING}
+      - Users__UsersInfrastructureCosmosDbOptions__DatabaseId=${USERS_COSMOSDB_DATABASE}
+      - Users__UsersInfrastructureCosmosDbOptions__Throughput=400
+      - Users__UsersInfrastructureCosmosDbOptions__UseIntegratedCache=false
+      - Users__UsersInfrastructureCosmosDbOptions__IgnoreSslCertificateValidation=true
+      - UsersDropDatabaseIfExists=false
       - SeederOptions__TenantsSeed=true
       - SeederOptions__UsersSeed=true
       - SeederOptions__SeedDataFilePath=/app/seed-data/users-db
@@ -821,22 +877,22 @@ public static class DiCompositor
 
     public static void ConfigureServices(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddOptionsAndValidateOnStart<CosmosDbOptions>(
-            configuration, CosmosDbOptions.ConfigSectionName);
         services.AddUsersCosmosDb(configuration);
+        services.AddUsersCosmosDbMigrations();
     }
 }
 
 // HttpApi/Program.cs
 builder.ConfigureInstrumentation();
 builder.Services.ConfigureServices(builder.Configuration);
-// ...
 var app = builder.Build();
-await app.UseUsersCosmosDbAsync();   // creates DB + containers before first request
+app.UseUsersCosmosDb();                          // wires container config (sync)
+var manager = app.Services.GetRequiredService<IUsersCosmosDbManagerRepository>();
+await manager.CreateDatabaseIfNotExistsAsync();  // creates DB + containers
+await app.ApplyUsersMigrationsAsync();           // runs pending migrations
 ```
 
-`AddOptionsAndValidateOnStart<T>` from `Libraries.Shared` uses `.ValidateDataAnnotations().ValidateOnStart()` — missing required
-configuration fields fail the app immediately at startup with a descriptive error rather than at first use.
+`AddUsersCosmosDb` internally calls `AddOptionsAndValidateOnStart<UsersInfrastructureCosmosDbOptions>` — missing required configuration fields fail the app immediately at startup with a descriptive error rather than at first use.
 
 ---
 
@@ -855,9 +911,9 @@ Four slash commands in `.claude/commands/` assist with development:
 
 ## Verification Checklist
 
-- [ ] `dotnet build` passes with 0 warnings for all 5 Users projects
+- [x] `dotnet build` passes with 0 errors for all 9 Users projects (verified 2026-05-01)
 - [ ] `docker compose -f docker-compose.yaml -f docker-compose.cosmosdb.yaml --env-file .env.dev up` starts emulator healthy
 - [ ] `users-init-container` service exits with code 0
-- [ ] Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 5 containers and seed data
+- [ ] Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 6 containers (`users`, `tenants`, `roles`, `actions`, `permissions`, `migrations`) and migration seed data
 - [ ] `az deployment sub what-if` shows three new Azure resources without errors
-- [ ] Consuming project (`HttpApi`) compiles with `AddUsersCosmosDb` in `DiCompositor.cs`
+- [ ] Consuming project (`HttpApi`) compiles with `AddUsersCosmosDb` + `AddUsersCosmosDbMigrations` in `DiCompositor.cs`
