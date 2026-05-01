@@ -8,7 +8,7 @@ This is a simple project to demonstrate how to use Azure Container Apps with .NE
 
 - install [Docker Desktop](https://www.docker.com/products/docker-desktop/)
 - [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/)
-- [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local). Current one `4.9.0+29aeab590e6c229a1a6631f6653df70f150f9f0e`
+- [Azure Functions Core Tools](https://docs.microsoft.com/en-us/azure/azure-functions/functions-run-local). Current one `4.10.0+2ced9a89e29b04615bc55cd527c074250266362f`
 - in the root directory, create the.env.dev file with
 
 ```.env.dev
@@ -41,6 +41,8 @@ OTEL_EXPORTER_OTLP_HEADERS=x-otlp-api-key=myprimaryapikey
 
 #aspire dashboard
 ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY=myprimaryapikey
+
+SEQ_ADMIN_PASSWORD=
 ```
 
 ### Run during development
@@ -214,7 +216,11 @@ az acr login -n myexampleacrtst
 Then, you can build and push the images using docker buildx
 
 ```bash
-docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key --push -t myexampleacrtst.azurecr.io/my-func:1.0.0 -f src/FunctionApp1/Dockerfile .
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key --push -t myexampleacrtst.azurecr.io/my-func:1.0.1 -f src/FunctionApp1/Dockerfile .
+```
+
+```bash
+docker buildx build --platform linux/amd64 --progress plain --build-arg BUILD_CONFIGURATION=Release --build-arg CERT_HASH=$(cat ./certs/dev.crt ./certs/dev.key | sha256sum | cut -d' ' -f1) --secret id=dev-crt,src=./certs/dev.crt --secret id=dev-key,src=./certs/dev.key --push -t myexampleacrtst.azurecr.io/my-httpapi:1.0.0 -f src/HttpApi/Dockerfile .
 ```
 
 ### Run to check is everything works with containers

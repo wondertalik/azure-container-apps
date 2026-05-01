@@ -27,7 +27,6 @@ resource keyVault 'Microsoft.KeyVault/vaults@2025-05-01' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
     enableRbacAuthorization: true
-    provisioningState: 'Succeeded'
   }
 }
 
