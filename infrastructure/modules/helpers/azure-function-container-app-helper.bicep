@@ -66,7 +66,7 @@ var stringWithoutHyphens = replace(azureFunctionName, '-', '')
 var storageAccountName = toLower(stringWithoutHyphens)
 
 resource azStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
-  name: '${storageAccountName}${targetEnvironment}' // 3 and 24 characters in length and use numbers and lower-case letters only.
+  name: take('${storageAccountName}${targetEnvironment}${uniqueString(resourceGroup().id)}', 24) // 3 and 24 characters in length and use numbers and lower-case letters only.
   location: location
   kind: 'StorageV2'
   tags: {

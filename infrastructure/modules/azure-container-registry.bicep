@@ -18,7 +18,7 @@ resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@
 }
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(userAssignedIdentity.id, 'AcrPullTestUserAssigned')
+  name: guid(azureContainerRegistry.id, userAssignedIdentity.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: azureContainerRegistry
   properties: {
     principalId: userAssignedIdentity.properties.principalId
