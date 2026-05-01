@@ -59,7 +59,8 @@ internal sealed class PermissionRepository(
     public async Task<DbPermission> UpdateAsync(DbPermission permission, CancellationToken cancellationToken)
     {
         Container container = await containerProvider.GetContainerAsync();
-        var response = await container.ReplaceItemAsync(permission, permission.UserId, keysProvider.GetPartitionKey(permission),
+        var response = await container.ReplaceItemAsync(permission, permission.UserId,
+            keysProvider.GetPartitionKey(permission),
             cancellationToken: cancellationToken);
         return response.Resource;
     }

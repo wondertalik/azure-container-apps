@@ -50,7 +50,7 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
             (AuthActions.AuthGetActions, "Get list of all actions in the system")
         };
 
-        foreach (var (actionId, name) in actions)
+        foreach ((string actionId, string name) in actions)
         {
             var existing = await actionRepository.GetAsync(actionId, cancellationToken);
             if (existing is not null)
@@ -58,9 +58,7 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
                 continue;
             }
 
-            await actionRepository.AddAsync(
-                new DbAction { ActionId = actionId, Name = name },
-                cancellationToken);
+            await actionRepository.AddAsync(new DbAction { ActionId = actionId, Name = name }, cancellationToken);
         }
     }
 
