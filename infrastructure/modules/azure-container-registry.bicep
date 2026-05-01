@@ -8,11 +8,11 @@ param userAssignedIdentityName string
 @description('Name of resouce group')
 param userIdentityResourceGroupName string
 
-resource azureContainerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+resource azureContainerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' existing = {
   name: azureContainerRegistryName
 }
 
-resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' existing = {
   name: userAssignedIdentityName
   scope: resourceGroup(userIdentityResourceGroupName)
 }
