@@ -1,5 +1,5 @@
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4.1047.100-6-dotnet-isolated8.0 AS base
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4.1048.200-2-dotnet-isolated8.0 AS base
 WORKDIR /home/site/wwwroot
 EXPOSE 8080
 

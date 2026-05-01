@@ -59,14 +59,11 @@ resource keyVault 'Microsoft.KeyVault/vaults@2024-11-01' existing = {
   name: keyVaultName
 }
 
-// Replace hyphens with underscores
-var stringWithoutHyphens = replace(azureFunctionName, '-', '')
-
-// Convert the string to lowercase
-var storageAccountName = toLower(stringWithoutHyphens)
+var sanitizedFunctionName = toLower(replace(azureFunctionName, '-', ''))
+var sanitizedEnv = toLower(replace(targetEnvironment, '-', ''))
 
 resource azStorageAccount 'Microsoft.Storage/storageAccounts@2025-01-01' = {
-  name: '${storageAccountName}${targetEnvironment}' // 3 and 24 characters in length and use numbers and lower-case letters only.
+  name: take('${sanitizedFunctionName}${sanitizedEnv}${uniqueString(resourceGroup().id)}', 24) // 3 and 24 characters in length and use numbers and lower-case letters only.
   location: location
   kind: 'StorageV2'
   tags: {

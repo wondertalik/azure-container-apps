@@ -8,17 +8,17 @@ param userAssignedIdentityName string
 @description('Name of resouce group')
 param userIdentityResourceGroupName string
 
-resource azureContainerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' existing = {
+resource azureContainerRegistry 'Microsoft.ContainerRegistry/registries@2025-04-01' existing = {
   name: azureContainerRegistryName
 }
 
-resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' existing = {
+resource userAssignedIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2024-11-30' existing = {
   name: userAssignedIdentityName
   scope: resourceGroup(userIdentityResourceGroupName)
 }
 
 resource roleAssignment 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(userAssignedIdentity.id, 'AcrPullTestUserAssigned')
+  name: guid(azureContainerRegistry.id, userAssignedIdentity.id, '7f951dda-4ed3-4680-a7ca-43fe172d538d')
   scope: azureContainerRegistry
   properties: {
     principalId: userAssignedIdentity.properties.principalId

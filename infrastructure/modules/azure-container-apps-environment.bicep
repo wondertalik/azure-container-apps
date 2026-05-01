@@ -57,7 +57,7 @@ resource vnet 'Microsoft.Network/virtualNetworks@2024-07-01' = {
   }
 }
 
-resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2024-02-02-preview' = {
+resource containerAppsEnvironment 'Microsoft.App/managedEnvironments@2025-02-02-preview' = {
   name: 'cae-${namePrefix}-${location}-${projectName}-${targetEnvironment}'
   location: location
   tags: {
