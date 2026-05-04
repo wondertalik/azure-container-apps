@@ -59,7 +59,7 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
         /// Who created the tenant assignment
         /// </summary>
         [JsonProperty("createdBy")]
-        public Guid CreatedBy { get; set; }
+        public string CreatedBy { get; set; } = string.Empty;
 
         /// <summary>
         /// When the tenant assignment was deleted (soft-delete)
@@ -71,14 +71,14 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
         /// Who deleted the tenant assignment
         /// </summary>
         [JsonProperty("deletedBy")]
-        public Guid? DeletedBy { get; set; }
+        public string? DeletedBy { get; set; }
     }
 
     /// <summary>
     /// Default tenant id
     /// </summary>
     [JsonProperty("defaultTenantId")]
-    public Guid? DefaultTenantId { get; set; }
+    public string? DefaultTenantId { get; set; }
 
     /// <summary>
     /// Indicates whether the user account is enabled/active. Null means unknown state.
@@ -96,7 +96,7 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
     /// Who disabled the user account. Null if account is not disabled or never been disabled.
     /// </summary>
     [JsonProperty("accountDisabledBy")]
-    public Guid? AccountDisabledBy { get; set; }
+    public string? AccountDisabledBy { get; set; }
 
     /// <summary>
     /// Timestamp when the user last connected. Null if never connected.
@@ -114,7 +114,7 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
     /// Who created the user profile
     /// </summary>
     [JsonProperty("createdBy")]
-    public Guid CreatedBy { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
 
     /// <summary>
     /// When the user profile was last updated
@@ -126,7 +126,7 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
     /// Who last updated the user profile
     /// </summary>
     [JsonProperty("updatedBy")]
-    public Guid UpdatedBy { get; set; }
+    public string UpdatedBy { get; set; } = string.Empty;
 
     /// <summary>
     /// When the entity was deleted
@@ -138,7 +138,7 @@ public sealed record DbUser : ICreatable, IUpdatable, ISoftDeletable, ILockable
     /// Who deleted the entity
     /// </summary>
     [JsonProperty("deletedBy")]
-    public Guid? DeletedBy { get; set; }
+    public string? DeletedBy { get; set; }
 
     /// <summary>
     /// When the entity was locked for provisioning. Null means unlocked.

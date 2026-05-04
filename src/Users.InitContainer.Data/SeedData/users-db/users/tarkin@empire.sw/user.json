@@ -1,0 +1,19 @@
+{
+  "id": "6778899a-abbc-49ab-cdef-012345678912",
+  "firstname": "Grand Moff",
+  "lastname": "Tarkin",
+  "email": "tarkin@empire.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "a0123345-4556-4678-192a-3b4c5d6e7f80",
+  "tenantAssignments": [
+    {
+      "tenantId": "a0123345-4556-4678-192a-3b4c5d6e7f80",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

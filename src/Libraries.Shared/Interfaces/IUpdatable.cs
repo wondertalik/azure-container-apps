@@ -4,5 +4,5 @@ public interface IUpdatable
 {
     DateTimeOffset UpdatedAt { get; set; }
 
-    Guid UpdatedBy { get; set; }
+    string UpdatedBy { get; set; }
 }

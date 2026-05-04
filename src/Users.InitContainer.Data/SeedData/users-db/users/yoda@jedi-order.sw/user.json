@@ -1,0 +1,19 @@
+{
+  "id": "d4e5f601-1223-4012-abcd-ef1234567834",
+  "firstname": "Yoda",
+  "lastname": "Grand Master",
+  "email": "yoda@jedi-order.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c",
+  "tenantAssignments": [
+    {
+      "tenantId": "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

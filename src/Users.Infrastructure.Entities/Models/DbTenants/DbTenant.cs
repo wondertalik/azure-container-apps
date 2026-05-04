@@ -46,7 +46,7 @@ public sealed record DbTenant : ICreatable, IUpdatable, ISoftDeletable, ILockabl
     /// Who created the tenant
     /// </summary>
     [JsonProperty("createdBy")]
-    public Guid CreatedBy { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
 
     /// <summary>
     /// When the tenant was last updated
@@ -58,7 +58,7 @@ public sealed record DbTenant : ICreatable, IUpdatable, ISoftDeletable, ILockabl
     /// Who last updated the tenant
     /// </summary>
     [JsonProperty("updatedBy")]
-    public Guid UpdatedBy { get; set; }
+    public string UpdatedBy { get; set; } = string.Empty;
 
     /// <summary>
     /// When the tenant was soft-deleted
@@ -70,7 +70,7 @@ public sealed record DbTenant : ICreatable, IUpdatable, ISoftDeletable, ILockabl
     /// Who soft-deleted the tenant
     /// </summary>
     [JsonProperty("deletedBy")]
-    public Guid? DeletedBy { get; set; }
+    public string? DeletedBy { get; set; }
 
     /// <summary>
     /// When the tenant was locked for async operations

@@ -65,7 +65,7 @@ internal sealed class PermissionRepository(
         return response.Resource;
     }
 
-    public async Task DeleteAsync(string userId, string tenantId, Guid deletedBy, CancellationToken cancellationToken)
+    public async Task DeleteAsync(string userId, string tenantId, string deletedBy, CancellationToken cancellationToken)
     {
         var permission = await GetAsync(userId, tenantId, cancellationToken);
         if (permission is null)

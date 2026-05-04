@@ -33,8 +33,14 @@ public sealed class TenantSeeder(
 
     private async Task SeedFromJsonAsync(CancellationToken cancellationToken)
     {
-        var usersDbPath = Path.Combine(_options.SeedDataFilePath, "users-db");
-        var tenantsJsonPath = Path.Combine(usersDbPath, "tenants.json");
+        string seedPath = _options.SeedDataFilePath;
+        if (!Path.IsPathRooted(seedPath))
+        {
+            seedPath = Path.Combine(AppContext.BaseDirectory, seedPath);
+        }
+
+        string usersDbPath = Path.Combine(seedPath, "users-db");
+        string tenantsJsonPath = Path.Combine(usersDbPath, "tenants.json");
 
         if (!File.Exists(tenantsJsonPath))
         {
@@ -42,7 +48,7 @@ public sealed class TenantSeeder(
             return;
         }
 
-        var json = await File.ReadAllTextAsync(tenantsJsonPath, cancellationToken);
+        string json = await File.ReadAllTextAsync(tenantsJsonPath, cancellationToken);
         var allTenants = JsonConvert.DeserializeObject<List<DbTenant>>(json, new JsonSerializerSettings
         {
             MissingMemberHandling = MissingMemberHandling.Ignore,

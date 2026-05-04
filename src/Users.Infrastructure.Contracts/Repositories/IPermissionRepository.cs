@@ -15,5 +15,5 @@ public interface IPermissionRepository
 
     Task<DbPermission> UpdateAsync(DbPermission permission, CancellationToken cancellationToken);
 
-    Task DeleteAsync(string userId, string tenantId, Guid deletedBy, CancellationToken cancellationToken);
+    Task DeleteAsync(string userId, string tenantId, string deletedBy, CancellationToken cancellationToken);
 }

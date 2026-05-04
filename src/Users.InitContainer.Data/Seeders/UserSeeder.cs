@@ -2,6 +2,7 @@ using System.Net.Mail;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Users.Authorization.Constants;
 using Users.Infrastructure.Contracts.Repositories;
 using Users.Infrastructure.Entities.Models.DbPermissions;
 using Users.Infrastructure.Entities.Models.DbUsers;
@@ -39,7 +40,13 @@ public sealed class UserSeeder(
 
     private async Task SeedFromJsonAsync(CancellationToken cancellationToken)
     {
-        var usersDirectory = Path.Combine(_options.SeedDataFilePath, "users-db", "users");
+        string seedPath = _options.SeedDataFilePath;
+        if (!Path.IsPathRooted(seedPath))
+        {
+            seedPath = Path.Combine(AppContext.BaseDirectory, seedPath);
+        }
+
+        string usersDirectory = Path.Combine(seedPath, "users-db", "users");
 
         if (!Directory.Exists(usersDirectory))
         {
@@ -47,15 +54,15 @@ public sealed class UserSeeder(
             return;
         }
 
-        var userDirectories = Directory.GetDirectories(usersDirectory);
+        string[] userDirectories = Directory.GetDirectories(usersDirectory);
         logger.LogInformation("Processing {Count} user directories", userDirectories.Length);
 
-        var total = userDirectories.Length;
-        var processed = 0;
+        int total = userDirectories.Length;
+        int processed = 0;
 
-        foreach (var userDirectory in userDirectories)
+        foreach (string userDirectory in userDirectories)
         {
-            var userEmail = Path.GetFileName(userDirectory);
+            string userEmail = Path.GetFileName(userDirectory);
 
             if (!IsValidEmail(userEmail))
             {
@@ -86,7 +93,7 @@ public sealed class UserSeeder(
 
         var dbUser = await ReadUserAsync(userJsonPath, userEmail, cancellationToken);
 
-        var permissionsJsonPath = Path.Combine(userDirectory, "permissions.json");
+        string permissionsJsonPath = Path.Combine(userDirectory, "permissions.json");
         var seedPermissions = await ReadPermissionsAsync(permissionsJsonPath, dbUser.UserId, cancellationToken);
 
         ValidateSeedData(dbUser, seedPermissions, userEmail, userDirectory);
@@ -148,9 +155,9 @@ public sealed class UserSeeder(
                 TenantId = seedPerm.TenantId,
                 RoleAssignments = roleAssignments,
                 CreatedAt = now,
-                CreatedBy = Guid.Empty,
+                CreatedBy = Root.SystemId,
                 UpdatedAt = now,
-                UpdatedBy = Guid.Empty
+                UpdatedBy = Root.SystemId
             };
 
             await permissionRepository.AddAsync(permission, cancellationToken);
@@ -191,9 +198,9 @@ public sealed class UserSeeder(
 
             if (role is null)
             {
-                var ref_ = hasId ? $"ID '{seed.RoleId}'" : $"name '{seed.RoleName}'";
+                string roleRef = hasId ? $"ID '{seed.RoleId}'" : $"name '{seed.RoleName}'";
                 throw new InvalidOperationException(
-                    $"Role with {ref_} not found for tenant {tenantId}");
+                    $"Role with {roleRef} not found for tenant {tenantId}");
             }
 
             result.Add(new DbRoleAssignment
@@ -289,7 +296,7 @@ public sealed class UserSeeder(
                 $"permissions.json is required but not found for user '{userId}' at path: {permissionsJsonPath}");
         }
 
-        var json = await File.ReadAllTextAsync(permissionsJsonPath, cancellationToken);
+        string json = await File.ReadAllTextAsync(permissionsJsonPath, cancellationToken);
 
         if (string.IsNullOrWhiteSpace(json))
         {

@@ -19,7 +19,7 @@ internal sealed class UserRepository(
     }
 
     // IRepository.DeleteAsync(id, deletedBy, ct) — users use id as partition key
-    Task IRepository<DbUser, string>.DeleteAsync(string id, Guid deletedBy, CancellationToken cancellationToken)
+    Task IRepository<DbUser, string>.DeleteAsync(string id, string deletedBy, CancellationToken cancellationToken)
     {
         return DeleteAsync(id, id, deletedBy, cancellationToken);
     }
@@ -50,7 +50,7 @@ internal sealed class UserRepository(
     public async Task PatchRemoveTenantAssignmentAsync(
         string userId,
         string tenantId,
-        Guid deletedBy,
+        string deletedBy,
         CancellationToken cancellationToken)
     {
         var user = await GetAsync(userId, userId, cancellationToken);

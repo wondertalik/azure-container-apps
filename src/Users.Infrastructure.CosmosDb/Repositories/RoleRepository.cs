@@ -1,5 +1,6 @@
 using Microsoft.Azure.Cosmos;
 using Libraries.Shared.CosmosDb.Configuration;
+using Users.Authorization.Constants;
 using Users.Infrastructure.Contracts.Repositories;
 using Users.Infrastructure.Entities.Models.DbRoles;
 
@@ -42,7 +43,7 @@ internal sealed class RoleRepository(
 
     public async Task<IReadOnlyList<DbRole>> GetGlobalRolesAsync(CancellationToken cancellationToken)
     {
-        return await GetByTenantIdAsync(Guid.Empty.ToString(), cancellationToken);
+        return await GetByTenantIdAsync(Root.SystemId, cancellationToken);
     }
 
     public async Task<DbRole> AddAsync(DbRole role, CancellationToken cancellationToken)

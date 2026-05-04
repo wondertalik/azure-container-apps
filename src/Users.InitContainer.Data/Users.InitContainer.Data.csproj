@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="SeedData/**/*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Users.Authorization.Constants\Users.Authorization.Constants.csproj" />
     <ProjectReference Include="..\Libraries.Shared\Libraries.Shared.csproj" />
     <ProjectReference Include="..\Users.Infrastructure.Contracts\Users.Infrastructure.Contracts.csproj" />
     <ProjectReference Include="..\Users.Infrastructure.Entities\Users.Infrastructure.Entities.csproj" />

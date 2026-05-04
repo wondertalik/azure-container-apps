@@ -47,7 +47,8 @@ Libraries.Shared
                     └── (HttpApi / FunctionApp1 reference Contracts + CosmosDb + Migrations)
 ```
 
-`HttpApi` and `FunctionApp1` call `services.AddUsersCosmosDb()` + `services.AddUsersCosmosDbMigrations()`. They never reference CosmosDB SDK types directly.
+`HttpApi` and `FunctionApp1` call `services.AddUsersCosmosDb()` + `services.AddUsersCosmosDbMigrations()`. They never reference
+CosmosDB SDK types directly.
 
 ---
 
@@ -217,17 +218,39 @@ writes.
 
 ```mermaid
 graph TD
-    ROOT["Root Tenant (Node)\nParentId: null"]
-    A["Tenant A (Node)\nParentId: ROOT"]
-    B["Tenant B (Node)\nParentId: ROOT"]
-    A1["Tenant A1 (Leaf)\nParentId: A"]
-    A2["Tenant A2 (Leaf)\nParentId: A"]
-    B1["Tenant B1 (Leaf)\nParentId: B"]
-    ROOT --> A
-    ROOT --> B
-    A --> A1
-    A --> A2
-    B --> B1
+    ROOT["The Force (Node)\nParentId: Guid.Empty"]
+    LS["Light Side (Node)"]
+    DS["Dark Side (Node)"]
+    UA["Unaligned (Node)"]
+    JO["Jedi Order (Node)"]
+    GR["Galactic Republic (Node)"]
+    JHC["Jedi High Council (Leaf)"]
+    SC["Senate Chamber (Leaf)"]
+    TC["Tipoca City (Leaf)"]
+    SO["Sith Order (Node)"]
+    GE["Galactic Empire (Node)"]
+    R2["Rule of Two (Leaf)"]
+    IS["Imperial Senate (Leaf)"]
+    DSC["Death Star Command (Leaf)"]
+    MA["Mandalorians (Node)"]
+    BHG["Bounty Hunters Guild (Leaf)"]
+    CV["The Covert (Leaf)"]
+    ROOT --> LS
+    ROOT --> DS
+    ROOT --> UA
+    LS --> JO
+    LS --> GR
+    JO --> JHC
+    GR --> SC
+    GR --> TC
+    DS --> SO
+    DS --> GE
+    SO --> R2
+    GE --> IS
+    GE --> DSC
+    UA --> MA
+    UA --> BHG
+    MA --> CV
 ```
 
 ---
@@ -480,7 +503,7 @@ Users.Infrastructure.CosmosDb/
   DependencyInjection                AddUsersCosmosDb(IConfiguration)
 
 Users.Infrastructure.CosmosDb.Migrations/
-  V20250501_202100_InitialSeed       First concrete migration (actions, Super Admin role, Root tenant)
+  V20250501_202100_InitialSeed       First concrete migration (20 actions, 6 global roles, "The Force" root tenant)
   DependencyInjection                AddUsersCosmosDbMigrations() — registers IMigration implementations
 ```
 
@@ -518,7 +541,8 @@ public sealed record UsersInfrastructureCosmosDbOptions
 }
 ```
 
-For the Parallels Desktop CosmosDB emulator, `IgnoreSslCertificateValidation` should remain `false` (certificates are trusted on the host). For the Docker Linux emulator, set it to `true`.
+For the Parallels Desktop CosmosDB emulator, `IgnoreSslCertificateValidation` should remain `false` (certificates are trusted on
+the host). For the Docker Linux emulator, set it to `true`.
 
 ### DI Registration
 
@@ -537,7 +561,9 @@ await manager.CreateDatabaseIfNotExistsAsync();     // creates DB + containers
 await app.ApplyUsersMigrationsAsync();
 ```
 
-`AddUsersCosmosDb` calls `AddCosmosDb()` from `Libraries.Shared.CosmosDb` (registers shared infra singletons) then adds options, repositories, and `IMigrationService`. Container configuration is registered at run time via `UseUsersCosmosDb()` — this populates the `CosmosDbConfigurator` with per-entity container bindings before any DB operations run.
+`AddUsersCosmosDb` calls `AddCosmosDb()` from `Libraries.Shared.CosmosDb` (registers shared infra singletons) then adds options,
+repositories, and `IMigrationService`. Container configuration is registered at run time via `UseUsersCosmosDb()` — this populates
+the `CosmosDbConfigurator` with per-entity container bindings before any DB operations run.
 
 ### Serialization
 
@@ -631,26 +657,117 @@ flowchart TD
 Files live in `Users.InitContainer.Data/SeedData/` and are copied to the output directory (
 `CopyToOutputDirectory: PreserveNewest`). The runtime path is injected via `SeederOptions.SeedDataFilePath`.
 
+Actions and roles are **not** seeded from JSON files — they come from the migration. Only tenants and users use JSON seed files.
+
 ```
 {SeedDataFilePath}/
   users-db/
-    actions.json              global action definitions
-    roles.json                system roles (TenantId = Guid.Empty for global roles)
     tenants.json              flat array — seeder builds tree, processes parent-first
     users/
-      admin@example.com/
+      {user@email}/
         user.json             DbUser document
-        permissions.json      REQUIRED — array of DbPermission, one per tenant
-      user2@example.com/
-        user.json
-        permissions.json
+        permissions.json      REQUIRED — array of SeedPermission, one per tenant
 ```
 
 **Rules:**
 
 - `permissions.json` is required for every user directory — missing file throws at seed time
-- Role assignments accept `roleId` (direct GUID) or `roleName` (seeder resolves to ID)
-- Seeding is idempotent — upsert semantics, safe to run multiple times
+- Role assignments accept `roleId` (direct GUID) or `roleName` (seeder resolves to ID at runtime)
+- Seeding is idempotent — existing documents are skipped, safe to run multiple times
+
+### Star Wars seed data (Force Alignment theme)
+
+#### Tenant hierarchy (15 tenants)
+
+```
+The Force (Root, Node)  —  9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c  [migration]
+│
+├── Light Side          (Node)  —  3fa85f64-5717-4562-b3fc-2c963f66afa6
+│   ├── Jedi Order      (Node)  —  7c9e6679-7425-40de-944b-e07fc1f90ae7
+│   │   └── Jedi High Council   (Leaf)  —  8f14e45f-ceea-467a-a866-051f2e3b9aa6
+│   └── Galactic Republic (Node) —  9b74c989-abbe-4561-b3c8-2a52d28f40d2
+│       ├── Senate Chamber      (Leaf)  —  e3d7f8a2-1b3c-4d5e-9f0a-2b4c6d8e0f1a
+│       └── Tipoca City         (Leaf)  —  4a5b6c7d-8e9f-4012-b3c4-d5e6f7081920
+│
+├── Dark Side           (Node)  —  5b6c7d8e-9f01-4123-c4d5-e6f708192a3b
+│   ├── Sith Order      (Node)  —  6c7d8e9f-0112-4234-d5e6-f708192a3b4c
+│   │   └── Rule of Two         (Leaf)  —  7d8e9f01-1223-4345-e6f7-08192a3b4c5d
+│   └── Galactic Empire (Node)  —  8e9f0112-2334-4456-f708-192a3b4c5d6e
+│       ├── Imperial Senate     (Leaf)  —  9f012234-3445-4567-0819-2a3b4c5d6e7f
+│       └── Death Star Command  (Leaf)  —  a0123345-4556-4678-192a-3b4c5d6e7f80
+│
+└── Unaligned           (Node)  —  b1234456-5667-4789-2a3b-4c5d6e7f8091
+    ├── Mandalorians    (Node)  —  c2345567-6778-489a-3b4c-5d6e7f809102
+    │   └── The Covert          (Leaf)  —  d3456678-7889-49ab-4c5d-6e7f80910213
+    └── Bounty Hunters Guild    (Leaf)  —  e4567789-899a-4abc-5d6e-7f8091021324
+```
+
+#### Roles (6 global, seeded by migration)
+
+All roles have `TenantId = Guid.Empty` (global). Each is a strict subset of the role above it; `Users.EditOwnProfile` is included
+in every role.
+
+| Role                 | ID                                     | Key actions                                |
+|----------------------|----------------------------------------|--------------------------------------------|
+| **The Chosen One**   | `a50fcd0f-e253-41eb-98b3-ef02bbde476e` | All 20 actions                             |
+| **Council Member**   | `a1c2e3f4-5b6d-4789-abcd-ef0123456789` | Cross-tenant view/manage + tenant add/edit |
+| **Knight Commander** | `b2d3f4e5-6c7d-4890-bcde-f01234567890` | Full CRUD in own tenant + assign roles     |
+| **Knight**           | `c3e4f5f6-7d8e-4901-cdef-012345678901` | View/edit users in own tenant              |
+| **Padawan**          | `d4f5e6f7-8e9f-4a12-def0-123456789012` | View users in own tenant                   |
+| **Youngling**        | `e5f6f7e8-9fab-4b23-ef01-234567890123` | Edit own profile only                      |
+
+#### Action display names (20 actions)
+
+`ActionId` constants in code are unchanged — only the human-readable `name` field is themed.
+
+| ActionId                      | Display name                             |
+|-------------------------------|------------------------------------------|
+| `Tenants.View`                | View Galactic Orders                     |
+| `Module.Tenants`              | Access Galactic Orders Registry          |
+| `Tenants.Add`                 | Establish New Order                      |
+| `Tenants.Edit`                | Reorganize Order Structure               |
+| `Tenants.Delete`              | Dissolve Galactic Order                  |
+| `Module.Users`                | Access Force Registry                    |
+| `Users.View`                  | Sense Members of Own Order               |
+| `Users.View.AllTenants`       | Sense All Force Beings Across the Galaxy |
+| `Users.Add`                   | Recruit to Own Order                     |
+| `Users.Add.AllTenants`        | Recruit Across All Orders                |
+| `Users.Edit`                  | Modify Record in Own Order               |
+| `Users.Edit.AllTenants`       | Modify Records Across All Orders         |
+| `Users.AssignExplicitActions` | Grant Force Abilities Directly           |
+| `Users.AssignRoles`           | Bestow Force Rank                        |
+| `Users.Delete`                | Exile from Own Order                     |
+| `Users.Delete.AllTenants`     | Exile from the Galaxy                    |
+| `Users.EditOwnProfile`        | Update Own Holocron                      |
+| `Auth.GetRoles`               | Consult Rank Hierarchy of Own Order      |
+| `Auth.GetRoles.AllTenants`    | Consult All Rank Hierarchies             |
+| `Auth.GetActions`             | Access the Jedi Archives                 |
+
+#### System users (migration)
+
+| Character | UserId                                                   | Email               | Tenant           | Role         |
+|-----------|----------------------------------------------------------|---------------------|------------------|--------------|
+| **Jawa**  | `Root.SystemId` (`00000000-0000-0000-0000-000000000000`) | `jawa@the-force.sw` | The Force (root) | The Operator |
+
+#### Users (15 characters, seed data)
+
+| Character         | Email                            | Primary tenant                  | Role(s)                           |
+|-------------------|----------------------------------|---------------------------------|-----------------------------------|
+| Yoda              | `yoda@jedi-order.sw`             | The Force (root)                | The Chosen One                    |
+| Mace Windu        | `mace.windu@jedi-order.sw`       | Jedi High Council               | Council Member                    |
+| Obi-Wan Kenobi    | `obiwan.kenobi@jedi-order.sw`    | Jedi Order                      | Knight Commander                  |
+| Anakin Skywalker  | `anakin.skywalker@jedi-order.sw` | Jedi Order + Rule of Two        | Knight Commander / Council Member |
+| Padmé Amidala     | `padme.amidala@republic.sw`      | Senate Chamber                  | Knight Commander                  |
+| Captain Rex       | `captain.rex@republic.sw`        | Tipoca City                     | Knight                            |
+| Emperor Palpatine | `palpatine@sith-order.sw`        | Rule of Two + Imperial Senate   | The Chosen One / Council Member   |
+| Count Dooku       | `count.dooku@sith-order.sw`      | Rule of Two                     | Council Member                    |
+| Darth Vader       | `darth.vader@empire.sw`          | Death Star Command + Sith Order | Knight Commander (both)           |
+| Grand Moff Tarkin | `tarkin@empire.sw`               | Death Star Command              | Knight Commander                  |
+| Din Djarin        | `din.djarin@mandalorians.sw`     | The Covert                      | Knight Commander                  |
+| Bo-Katan Kryze    | `bo-katan@mandalorians.sw`       | Mandalorians + The Covert       | Council Member / Knight           |
+| Boba Fett         | `boba.fett@hunters.sw`           | Bounty Hunters Guild            | Knight Commander                  |
+| Luke Skywalker    | `luke.skywalker@rebel.sw`        | Jedi Order + Tipoca City        | Knight / Padawan                  |
+| Leia Organa       | `leia.organa@republic.sw`        | Senate Chamber + Tipoca City    | Council Member / Knight           |
 
 ### SeederOptions
 
@@ -669,7 +786,8 @@ public sealed record SeederOptions
 
 ## Migration Mechanism
 
-Schema and data migrations run exactly once per environment. Applied versions are recorded in the `migrations` CosmosDB container so re-runs skip them.
+Schema and data migrations run exactly once per environment. Applied versions are recorded in the `migrations` CosmosDB container
+so re-runs skip them.
 
 ### Container
 
@@ -683,7 +801,9 @@ No soft-delete — migrations are permanent records.
 
 ### Interfaces
 
-`IMigration` is **public** (lives in `Users.Infrastructure.CosmosDb`) so that `Users.Infrastructure.CosmosDb.Migrations` and future migration assemblies can implement it. `IMigrationService` is **internal** — exposed to consumers only via the `ApplyUsersMigrationsAsync` extension method.
+`IMigration` is **public** (lives in `Users.Infrastructure.CosmosDb`) so that `Users.Infrastructure.CosmosDb.Migrations` and
+future migration assemblies can implement it. `IMigrationService` is **internal** — exposed to consumers only via the
+`ApplyUsersMigrationsAsync` extension method.
 
 ```csharp
 // public — implementable from any project referencing Users.Infrastructure.CosmosDb
@@ -704,7 +824,8 @@ internal interface IMigrationService
 
 ### `MigrationService` behaviour
 
-`MigrationService` receives `IEnumerable<IMigration>` via constructor injection — all registered `IMigration` singletons are discovered automatically. On each startup:
+`MigrationService` receives `IEnumerable<IMigration>` via constructor injection — all registered `IMigration` singletons are
+discovered automatically. On each startup:
 
 1. Loads all applied versions from the `migrations` container
 2. Finds pending migrations (`Version` not in applied set)
@@ -728,7 +849,8 @@ V{YYYYMMDD}_{HHMMSS}_{Description}
 
 Example: `V20250501_202100_InitialSeed`
 
-Always use the **UTC timestamp** of when the migration was created. The `V` prefix and underscores are required for lexicographic sort correctness.
+Always use the **UTC timestamp** of when the migration was created. The `V` prefix and underscores are required for lexicographic
+sort correctness.
 
 ### System-level constants (`Root` class)
 
@@ -749,13 +871,13 @@ Using well-known fixed values ensures migrations are reproducible and idempotent
 
 Seeds the minimum bootstrap data that every new deployment needs. Located in `Users.Infrastructure.CosmosDb.Migrations`.
 
-| Type | Details |
-|------|---------|
-| Root tenant | `TenantId = Root.TenantId` (`9d6e73c7-...`), `Name = "Root"`, `TenantType = Node`, `ParentId = Root.SystemId` |
-| 16 actions | All action IDs from `TenantActions`, `UserActions`, `AuthActions` |
-| Super Admin role | `RoleId = Root.SuperAdminRoleId`, `Name = "Super Admin"`, `TenantId = Root.SystemId` (global), all 16 action IDs |
+| Type           | Details                                                                                                            |
+|----------------|--------------------------------------------------------------------------------------------------------------------|
+| Root tenant    | `TenantId = Root.TenantId` (`9d6e73c7-...`), `Name = "The Force"`, `TenantType = Node`, `ParentId = Root.SystemId` |
+| 20 actions     | All IDs from `TenantActions` (5), `UserActions` (12), `AuthActions` (3) — Star Wars-themed display names           |
+| 6 global roles | The Chosen One (all 20), Council Member, Knight Commander, Knight, Padawan, Youngling                              |
 
-All three are idempotent: existing documents are skipped.
+All are idempotent: existing documents are skipped.
 
 ### Adding a new migration
 
@@ -765,7 +887,8 @@ All three are idempotent: existing documents are skipped.
    ```csharp
    services.AddSingleton<IMigration, V20250601_120000_AddSomething>();
    ```
-4. `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` — all registered `IMigration` singletons are injected into `MigrationService` as `IEnumerable<IMigration>` and executed in version order on startup.
+4. `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` — all registered `IMigration` singletons are injected into
+   `MigrationService` as `IEnumerable<IMigration>` and executed in version order on startup.
 
 ---
 
@@ -892,7 +1015,8 @@ await manager.CreateDatabaseIfNotExistsAsync();  // creates DB + containers
 await app.ApplyUsersMigrationsAsync();           // runs pending migrations
 ```
 
-`AddUsersCosmosDb` internally calls `AddOptionsAndValidateOnStart<UsersInfrastructureCosmosDbOptions>` — missing required configuration fields fail the app immediately at startup with a descriptive error rather than at first use.
+`AddUsersCosmosDb` internally calls `AddOptionsAndValidateOnStart<UsersInfrastructureCosmosDbOptions>` — missing required
+configuration fields fail the app immediately at startup with a descriptive error rather than at first use.
 
 ---
 
@@ -911,9 +1035,10 @@ Four slash commands in `.claude/commands/` assist with development:
 
 ## Verification Checklist
 
-- [x] `dotnet build` passes with 0 errors for all 9 Users projects (verified 2026-05-01)
+- [x] `dotnet build` passes with 0 errors for all 9 Users projects (verified 2026-05-02)
 - [ ] `docker compose -f docker-compose.yaml -f docker-compose.cosmosdb.yaml --env-file .env.dev up` starts emulator healthy
 - [ ] `users-init-container` service exits with code 0
-- [ ] Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 6 containers (`users`, `tenants`, `roles`, `actions`, `permissions`, `migrations`) and migration seed data
+- [ ] Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 6 containers and expected seed
+  counts: users=15, tenants=15, roles=6, actions=20, permissions=20, migrations=1
 - [ ] `az deployment sub what-if` shows three new Azure resources without errors
 - [ ] Consuming project (`HttpApi`) compiles with `AddUsersCosmosDb` + `AddUsersCosmosDbMigrations` in `DiCompositor.cs`

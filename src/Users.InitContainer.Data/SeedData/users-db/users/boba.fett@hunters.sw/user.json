@@ -1,0 +1,19 @@
+{
+  "id": "9a0b00cd-deef-4cde-f012-345678901245",
+  "firstname": "Boba",
+  "lastname": "Fett",
+  "email": "boba.fett@hunters.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "e4567789-899a-4abc-5d6e-7f8091021324",
+  "tenantAssignments": [
+    {
+      "tenantId": "e4567789-899a-4abc-5d6e-7f8091021324",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

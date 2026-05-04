@@ -1,0 +1,24 @@
+{
+  "id": "34455667-7889-4678-abcd-ef123456789a",
+  "firstname": "Emperor",
+  "lastname": "Palpatine",
+  "email": "palpatine@sith-order.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "7d8e9f01-1223-4345-e6f7-08192a3b4c5d",
+  "tenantAssignments": [
+    {
+      "tenantId": "7d8e9f01-1223-4345-e6f7-08192a3b4c5d",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    },
+    {
+      "tenantId": "9f012234-3445-4567-0819-2a3b4c5d6e7f",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

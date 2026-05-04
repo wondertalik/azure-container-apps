@@ -1,0 +1,14 @@
+[
+  {
+    "tenantId": "c2345567-6778-489a-3b4c-5d6e7f809102",
+    "roleAssignments": [
+      { "roleName": "Council Member" }
+    ]
+  },
+  {
+    "tenantId": "d3456678-7889-49ab-4c5d-6e7f80910213",
+    "roleAssignments": [
+      { "roleName": "Knight" }
+    ]
+  }
+]

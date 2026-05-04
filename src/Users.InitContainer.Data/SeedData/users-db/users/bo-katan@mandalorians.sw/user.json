@@ -1,0 +1,24 @@
+{
+  "id": "899a00bc-cdde-4bcd-ef01-234567890134",
+  "firstname": "Bo-Katan",
+  "lastname": "Kryze",
+  "email": "bo-katan@mandalorians.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "c2345567-6778-489a-3b4c-5d6e7f809102",
+  "tenantAssignments": [
+    {
+      "tenantId": "c2345567-6778-489a-3b4c-5d6e7f809102",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    },
+    {
+      "tenantId": "d3456678-7889-49ab-4c5d-6e7f80910213",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

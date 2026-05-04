@@ -6,5 +6,5 @@ public interface IRepository<TEntity, in TKey>
     Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken);
     Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken);
     Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken);
-    Task DeleteAsync(TKey id, Guid deletedBy, CancellationToken cancellationToken);
+    Task DeleteAsync(TKey id, string deletedBy, CancellationToken cancellationToken);
 }

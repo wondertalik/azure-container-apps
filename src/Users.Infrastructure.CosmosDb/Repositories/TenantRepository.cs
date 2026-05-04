@@ -19,7 +19,7 @@ internal sealed class TenantRepository(
     }
 
     // IRepository.DeleteAsync(id, deletedBy, ct) — tenants use id as partition key
-    Task IRepository<DbTenant, string>.DeleteAsync(string id, Guid deletedBy, CancellationToken cancellationToken)
+    Task IRepository<DbTenant, string>.DeleteAsync(string id, string deletedBy, CancellationToken cancellationToken)
     {
         return DeleteAsync(id, id, deletedBy, cancellationToken);
     }

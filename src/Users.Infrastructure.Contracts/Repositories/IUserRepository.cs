@@ -14,6 +14,6 @@ public interface IUserRepository : IRepository<DbUser, string>
     Task PatchRemoveTenantAssignmentAsync(
         string userId,
         string tenantId,
-        Guid deletedBy,
+        string deletedBy,
         CancellationToken cancellationToken);
 }

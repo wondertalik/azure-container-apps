@@ -9,8 +9,7 @@ namespace Users.InitContainer.Data;
 public static class DependencyInjection
 {
     public static IServiceCollection AddUsersInitContainerData(
-        this IServiceCollection services,
-        IConfiguration configuration)
+        this IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptionsAndValidateOnStart<SeederOptions>(configuration, SeederOptions.ConfigSectionName);
 

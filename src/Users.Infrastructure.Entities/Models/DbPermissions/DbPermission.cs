@@ -25,11 +25,11 @@ public sealed record DbPermission : ICreatable, IUpdatable, ISoftDeletable
 
     [JsonProperty("createdAt")] public DateTimeOffset CreatedAt { get; set; }
 
-    [JsonProperty("createdBy")] public Guid CreatedBy { get; set; }
+    [JsonProperty("createdBy")] public string CreatedBy { get; set; } = string.Empty;
 
     [JsonProperty("updatedAt")] public DateTimeOffset UpdatedAt { get; set; }
 
-    [JsonProperty("updatedBy")] public Guid UpdatedBy { get; set; }
+    [JsonProperty("updatedBy")] public string UpdatedBy { get; set; } = string.Empty;
 
     /// <summary>
     /// When the entity was deleted
@@ -41,5 +41,5 @@ public sealed record DbPermission : ICreatable, IUpdatable, ISoftDeletable
     /// Who deleted the entity
     /// </summary>
     [JsonProperty("deletedBy")]
-    public Guid? DeletedBy { get; set; }
+    public string? DeletedBy { get; set; }
 }

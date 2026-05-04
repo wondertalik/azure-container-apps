@@ -1,0 +1,19 @@
+{
+  "id": "23344556-6778-4567-abcd-ef1234567889",
+  "firstname": "Captain",
+  "lastname": "Rex",
+  "email": "captain.rex@republic.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "4a5b6c7d-8e9f-4012-b3c4-d5e6f7081920",
+  "tenantAssignments": [
+    {
+      "tenantId": "4a5b6c7d-8e9f-4012-b3c4-d5e6f7081920",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

@@ -135,7 +135,7 @@ public abstract class SoftDeleteCosmosRepository<T>(
         return ids.Select(id => new RecordExists(id, found.Contains(id))).ToList();
     }
 
-    public async Task DeleteAsync(string id, string partitionKey, Guid deletedBy, CancellationToken cancellationToken)
+    public async Task DeleteAsync(string id, string partitionKey, string deletedBy, CancellationToken cancellationToken)
     {
         var entity = await GetAsync(id, partitionKey, cancellationToken);
         if (entity is null)
@@ -150,7 +150,7 @@ public abstract class SoftDeleteCosmosRepository<T>(
 
     public async Task<IReadOnlyList<RecordsAffected>> DeleteMultipleAsync(
         IReadOnlyList<T> entities,
-        Guid deletedBy,
+        string deletedBy,
         CancellationToken cancellationToken)
     {
         foreach (var e in entities)
