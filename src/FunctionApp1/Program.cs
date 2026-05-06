@@ -44,7 +44,7 @@ builder.Services
         );
         traceBuilder.SetSampler(new AlwaysOnSampler())
             .AddSource("Microsoft.Azure.Functions.Worker");
-        
+
         if (!string.IsNullOrWhiteSpace(sentryDsn))
         {
             traceBuilder.AddSentry();

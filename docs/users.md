@@ -1,0 +1,1044 @@
+# Users Module
+
+## Overview
+
+The Users module provides multi-tenant identity and access management for the platform. It manages:
+
+- **Users** (`DbUser`) — people with profiles and tenant memberships
+- **Tenants** (`DbTenant`) — organizational units arranged in a hierarchy (nodes and leaves)
+- **Roles** (`DbRole`) — named permission sets scoped to a tenant or globally
+- **Actions** (`DbAction`) — discrete capabilities a role can grant (e.g. `users:read`)
+- **Permissions** (`DbPermission`) — the runtime link between a user, a tenant, and their assigned roles
+
+All data lives in **Azure Cosmos DB NoSQL** (database: `users-db`). The module exposes provider-agnostic repository interfaces (
+`Users.Infrastructure.Contracts`) with a Cosmos DB implementation (`Users.Infrastructure.CosmosDb`) that can be swapped for any
+other persistence technology without touching consumers.
+
+---
+
+## Project Structure
+
+```
+src/
+  Users.Authorization.Constants/       Action ID string constants + system-level constants (Root)
+  Users.Shared/                        Enums shared across all Users projects
+  Users.Infrastructure.Entities/       CosmosDB document records
+  Users.Infrastructure.Contracts/      Repository interfaces (provider-agnostic)
+  Libraries.Shared.CosmosDb/           Reusable multi-database CosmosDB infrastructure
+  Users.Infrastructure.CosmosDb/       CosmosDB implementation (repositories, DI wiring)
+  Users.Infrastructure.CosmosDb.Migrations/  Concrete migration implementations
+  Users.InitContainer/                 Console app — DB provisioning + seed
+  Users.InitContainer.Data/            Seed data files (JSON, per-email directories)
+```
+
+### Dependency Graph
+
+```
+Users.Authorization.Constants          ← zero dependencies; action IDs + Root constants
+
+Libraries.Shared
+  └── Libraries.Shared.CosmosDb        ← multi-database CosmosDB infrastructure
+  └── Users.Shared
+        └── Users.Infrastructure.Entities
+              └── Users.Infrastructure.Contracts
+                    └── Users.Infrastructure.CosmosDb  ← Microsoft.Azure.Cosmos
+                    │     └── Users.Infrastructure.CosmosDb.Migrations
+                    │           └── Users.InitContainer ← Users.InitContainer.Data
+                    └── (HttpApi / FunctionApp1 reference Contracts + CosmosDb + Migrations)
+```
+
+`HttpApi` and `FunctionApp1` call `services.AddUsersCosmosDb()` + `services.AddUsersCosmosDbMigrations()`. They never reference
+CosmosDB SDK types directly.
+
+---
+
+## Domain Model
+
+### Entities
+
+| Entity       | Class          | Container     | Partition Key | Doc `id`   | Audit Interfaces                                    |
+|--------------|----------------|---------------|---------------|------------|-----------------------------------------------------|
+| User profile | `DbUser`       | `users`       | `/id`         | `UserId`   | `ICreatable, IUpdatable, ISoftDeletable, ILockable` |
+| Tenant       | `DbTenant`     | `tenants`     | `/id`         | `TenantId` | `ICreatable, IUpdatable, ISoftDeletable, ILockable` |
+| Role         | `DbRole`       | `roles`       | `/tenantId`   | `RoleId`   | —                                                   |
+| Action       | `DbAction`     | `actions`     | `/id`         | `ActionId` | —                                                   |
+| Permission   | `DbPermission` | `permissions` | `/tenantId`   | `UserId`   | `ICreatable, IUpdatable, ISoftDeletable`            |
+
+### Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    DbUser {
+        string UserId PK
+        string Email
+        string Firstname
+        string Lastname
+        string UserProfileImageUri
+        guid DefaultTenantId
+        bool AccountEnabled
+        DateTimeOffset AccountDisabledAt
+        guid AccountDisabledBy
+        DateTimeOffset ConnectedAt
+        DateTimeOffset CreatedAt
+        guid CreatedBy
+        DateTimeOffset UpdatedAt
+        guid UpdatedBy
+        DateTimeOffset DeletedAt
+        DateTimeOffset LockedAt
+    }
+
+    DbTenantAssignment {
+        string TenantId FK
+        DateTimeOffset CreatedAt
+        guid CreatedBy
+        DateTimeOffset DeletedAt
+        guid DeletedBy
+    }
+
+    DbTenant {
+        string TenantId PK
+        string Name
+        string ParentId FK
+        list ChildIds
+        TenantType TenantType
+        DateTimeOffset CreatedAt
+        guid CreatedBy
+        DateTimeOffset UpdatedAt
+        guid UpdatedBy
+        DateTimeOffset DeletedAt
+        DateTimeOffset LockedAt
+    }
+
+    DbPermission {
+        string UserId FK
+        string TenantId FK
+        DateTimeOffset CreatedAt
+        guid CreatedBy
+        DateTimeOffset UpdatedAt
+        guid UpdatedBy
+        DateTimeOffset DeletedAt
+    }
+
+    DbRoleAssignment {
+        string RoleId FK
+        DateTimeOffset ValidFrom
+        DateTimeOffset ValidTo
+    }
+
+    DbRole {
+        string RoleId PK
+        string Name
+        string Group
+        string TenantId FK
+        list ActionIds
+    }
+
+    DbAction {
+        string ActionId PK
+        string Name
+    }
+
+    DbUser ||--o{ DbTenantAssignment: "belongs to"
+    DbTenantAssignment }o--|| DbTenant: "references"
+    DbPermission }o--|| DbUser: "scopes"
+    DbPermission }o--|| DbTenant: "scopes"
+    DbPermission ||--o{ DbRoleAssignment: "grants"
+    DbRoleAssignment }o--|| DbRole: "references"
+    DbRole ||--o{ DbAction: "permits"
+```
+
+---
+
+## RBAC Permission Model
+
+A user's effective permissions for a given tenant are resolved as follows:
+
+```
+DbUser.TenantAssignments  →  which tenants the user belongs to
+DbPermission (userId + tenantId)  →  which roles the user has in that tenant
+DbRole.ActionIds  →  which actions those roles permit
+DbAction  →  the named capability being checked
+```
+
+Global roles (`DbRole.TenantId = Guid.Empty`) are available across all tenants and are resolved alongside tenant-specific roles.
+
+### Permission Resolution Flow
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant PermissionRepository
+    participant RoleRepository
+    participant ActionRepository
+    Caller ->> PermissionRepository: GetAsync(userId, tenantId)
+    PermissionRepository -->> Caller: DbPermission (roleAssignments[])
+
+    loop for each DbRoleAssignment
+        Caller ->> RoleRepository: GetByIdAsync(roleId, tenantId)
+        RoleRepository -->> Caller: DbRole (actionIds[])
+    end
+
+    Caller ->> RoleRepository: GetGlobalRolesAsync()
+    RoleRepository -->> Caller: DbRole[] (tenantId = Guid.Empty)
+    Caller ->> ActionRepository: GetAllAsync()
+    ActionRepository -->> Caller: DbAction[] (full action catalogue)
+    Note over Caller: Intersect resolved actionIds with required action
+```
+
+### Temporal Role Validity
+
+`DbRoleAssignment` carries optional `ValidFrom` / `ValidTo` timestamps. A role assignment is active only when `now` falls within
+the validity window:
+
+- `ValidFrom = null` → active from the beginning of time
+- `ValidTo = null` → active until the end of time
+
+Callers must filter expired assignments at query time.
+
+---
+
+## Tenant Hierarchy
+
+Tenants form a tree. Each `DbTenant` stores:
+
+- `ParentId` — ID of the parent tenant (`null` or empty GUID for root tenants)
+- `ChildIds` — list of direct children IDs
+- `TenantType` — `Node` (branch, has children) or `Leaf` (no children)
+
+### Dual-Write Contract
+
+Both `ParentId` and `ChildIds` are maintained. Any operation that creates or breaks a parent-child relationship **must** update
+both documents atomically (these are different partition keys, so Cosmos DB cannot guarantee atomicity — compensating logic with
+ETag-based optimistic concurrency is used).
+
+`ITenantRepository` exposes `AddChildAsync(parentId, childId)` and `RemoveChildAsync(parentId, childId)` that encapsulate both
+writes.
+
+### Hierarchy Example
+
+```mermaid
+graph TD
+    ROOT["The Force (Node)\nParentId: Guid.Empty"]
+    LS["Light Side (Node)"]
+    DS["Dark Side (Node)"]
+    UA["Unaligned (Node)"]
+    JO["Jedi Order (Node)"]
+    GR["Galactic Republic (Node)"]
+    JHC["Jedi High Council (Leaf)"]
+    SC["Senate Chamber (Leaf)"]
+    TC["Tipoca City (Leaf)"]
+    SO["Sith Order (Node)"]
+    GE["Galactic Empire (Node)"]
+    R2["Rule of Two (Leaf)"]
+    IS["Imperial Senate (Leaf)"]
+    DSC["Death Star Command (Leaf)"]
+    MA["Mandalorians (Node)"]
+    BHG["Bounty Hunters Guild (Leaf)"]
+    CV["The Covert (Leaf)"]
+    ROOT --> LS
+    ROOT --> DS
+    ROOT --> UA
+    LS --> JO
+    LS --> GR
+    JO --> JHC
+    GR --> SC
+    GR --> TC
+    DS --> SO
+    DS --> GE
+    SO --> R2
+    GE --> IS
+    GE --> DSC
+    UA --> MA
+    UA --> BHG
+    MA --> CV
+```
+
+---
+
+## CosmosDB Container Design
+
+### `users` container
+
+| Property      | Value    |
+|---------------|----------|
+| Partition key | `/id`    |
+| Document `id` | `UserId` |
+
+**Access patterns:**
+
+| Query                                                                                         | Type            | Notes                          |
+|-----------------------------------------------------------------------------------------------|-----------------|--------------------------------|
+| `ReadItemAsync(userId, userId)`                                                               | Point read      | Primary lookup by user ID      |
+| `SELECT * WHERE c.email = @email`                                                             | Cross-partition | Login flow — needs email index |
+| `SELECT * WHERE EXISTS (SELECT VALUE t FROM t IN c.tenantAssignments WHERE t.tenantId = @id)` | Cross-partition | List users in a tenant         |
+
+**Index policy:**
+
+```json
+{
+  "includedPaths": [
+    {
+      "path": "/*"
+    }
+  ],
+  "excludedPaths": [
+    {
+      "path": "/userProfileImageUri/?"
+    }
+  ],
+  "compositeIndexes": [
+    [
+      {
+        "path": "/lastname",
+        "order": "ascending"
+      },
+      {
+        "path": "/firstname",
+        "order": "ascending"
+      }
+    ]
+  ]
+}
+```
+
+---
+
+### `tenants` container
+
+| Property      | Value      |
+|---------------|------------|
+| Partition key | `/id`      |
+| Document `id` | `TenantId` |
+
+**Access patterns:**
+
+| Query                                   | Type            | Notes                                        |
+|-----------------------------------------|-----------------|----------------------------------------------|
+| `ReadItemAsync(tenantId, tenantId)`     | Point read      | Lookup by ID                                 |
+| `SELECT * WHERE c.parentId = @parentId` | Cross-partition | List children (fallback / consistency check) |
+| `SELECT * FROM c`                       | Cross-partition | Full list for admin UI                       |
+
+Index on `/parentId/?` explicitly.
+
+---
+
+### `roles` container
+
+| Property               | Value                   |
+|------------------------|-------------------------|
+| Partition key          | `/tenantId`             |
+| Document `id`          | `RoleId`                |
+| Global roles partition | `tenantId = Guid.Empty` |
+
+**Access patterns:**
+
+| Query                                        | Type         | Notes                   |
+|----------------------------------------------|--------------|-------------------------|
+| `ReadItemAsync(roleId, tenantId)`            | Point read   | Lookup by role + tenant |
+| `SELECT * WHERE c.tenantId = @tenantId`      | In-partition | All roles for a tenant  |
+| `SELECT * WHERE c.tenantId = '00000000-...'` | In-partition | All global roles        |
+
+---
+
+### `actions` container
+
+| Property      | Value      |
+|---------------|------------|
+| Partition key | `/id`      |
+| Document `id` | `ActionId` |
+
+Small, static reference data. Self-partitioned so every read is a point read. Loaded in full at startup for caching.
+
+---
+
+### `permissions` container
+
+| Property      | Value       |
+|---------------|-------------|
+| Partition key | `/tenantId` |
+| Document `id` | `UserId`    |
+
+One document per user-tenant pair. `id = userId` is unique within a partition (`tenantId`), so the composite key
+`(userId, tenantId)` guarantees one permission document per user per tenant.
+
+**Access patterns:**
+
+| Query                             | Type            | Notes                                                        |
+|-----------------------------------|-----------------|--------------------------------------------------------------|
+| `ReadItemAsync(userId, tenantId)` | Point read      | "What roles does user X have in tenant Y?" — primary pattern |
+| `SELECT * WHERE c.id = @userId`   | Cross-partition | All tenant permissions for a user — expensive, use sparingly |
+
+**Index policy:** Include `/roleAssignments/[]/roleId/?` for role-based queries.
+
+---
+
+## Repository Contracts
+
+All interfaces live in `Users.Infrastructure.Contracts`. They are provider-agnostic — no Cosmos DB types leak into this layer.
+
+### Generic Base
+
+```csharp
+public interface IRepository<TEntity, in TKey>
+{
+    Task<TEntity?> GetAsync(TKey id, CancellationToken cancellationToken);
+    Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken cancellationToken);
+    Task<TEntity> AddAsync(TEntity entity, CancellationToken cancellationToken);
+    Task<TEntity> UpdateAsync(TEntity entity, CancellationToken cancellationToken);
+    Task DeleteAsync(TKey id, Guid deletedBy, CancellationToken cancellationToken);
+}
+```
+
+### `IUserRepository`
+
+```csharp
+public interface IUserRepository : IRepository<DbUser, string>
+{
+    Task<DbUser?> GetByEmailAsync(string email, CancellationToken ct = default);
+
+    // WARNING: cross-partition fan-out — use for admin/search only
+    Task<IReadOnlyList<DbUser>> GetByTenantAsync(string tenantId, CancellationToken ct = default);
+
+    Task PatchAddTenantAssignmentAsync(string userId, DbUser.DbTenantAssignment assignment, Guid updatedBy, CancellationToken ct = default);
+    Task PatchRemoveTenantAssignmentAsync(string userId, string tenantId, Guid deletedBy, CancellationToken ct = default);
+    Task PatchAccountEnabledAsync(string userId, bool enabled, Guid? disabledBy, CancellationToken ct = default);
+    Task PatchConnectedAtAsync(string userId, DateTimeOffset connectedAt, CancellationToken ct = default);
+}
+```
+
+### `ITenantRepository`
+
+```csharp
+public interface ITenantRepository : IRepository<DbTenant, string>
+{
+    // WARNING: cross-partition fan-out — acceptable for bounded tenant sets
+    Task<IReadOnlyList<DbTenant>> GetAllAsync(CancellationToken ct = default);
+
+    Task AddChildAsync(string parentId, string childId, CancellationToken ct = default);
+    Task RemoveChildAsync(string parentId, string childId, CancellationToken ct = default);
+}
+```
+
+### `IRoleRepository`
+
+Composite partition key — does not extend the generic base.
+
+```csharp
+public interface IRoleRepository
+{
+    Task<DbRole?> GetByIdAsync(string roleId, string tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<DbRole>> GetByTenantAsync(string tenantId, CancellationToken ct = default);
+    Task<IReadOnlyList<DbRole>> GetGlobalRolesAsync(CancellationToken ct = default);
+    Task<DbRole> CreateAsync(DbRole role, CancellationToken ct = default);
+    Task<DbRole> UpdateAsync(DbRole role, CancellationToken ct = default);
+    Task DeleteAsync(string roleId, string tenantId, CancellationToken ct = default);
+}
+```
+
+### `IActionRepository`
+
+```csharp
+public interface IActionRepository
+{
+    Task<DbAction?> GetByIdAsync(string actionId, CancellationToken ct = default);
+    Task<IReadOnlyList<DbAction>> GetAllAsync(CancellationToken ct = default);
+    Task<DbAction> CreateAsync(DbAction action, CancellationToken ct = default);
+}
+```
+
+### `IPermissionRepository`
+
+Composite partition key — does not extend the generic base.
+
+```csharp
+public interface IPermissionRepository
+{
+    // Primary access pattern
+    Task<DbPermission?> GetAsync(string userId, string tenantId, CancellationToken ct = default);
+
+    // WARNING: cross-partition fan-out — cache results where possible
+    Task<IReadOnlyList<DbPermission>> GetAllForUserAsync(string userId, CancellationToken ct = default);
+
+    Task<DbPermission> UpsertAsync(DbPermission permission, CancellationToken ct = default);
+    Task DeleteAsync(string userId, string tenantId, CancellationToken ct = default);
+}
+```
+
+---
+
+## CosmosDB Implementation
+
+### Architecture
+
+```
+Libraries.Shared.CosmosDb/
+  Configuration/
+    ICosmosDbContainerProvider<T>    Typed container handle per entity
+    ICosmosDbKeysProvider<T>         Partition key + primary key resolution per entity
+    CosmosDbConfigurator             Multi-database registry (keyed by CosmosDbReference)
+    CosmosDbClientProvider           Creates CosmosClient from connection string / managed identity
+    CosmosDbContainerBuilder         Fluent per-container configuration
+    CosmosDbDatabaseOptions          Per-database options (connection, throughput, TLS)
+  ServicesExtensions                 AddCosmosDb() — registers all shared infrastructure singletons
+
+Users.Infrastructure.CosmosDb/
+  Options/
+    UsersInfrastructureCosmosDbOptions   ConnectionString, DatabaseId, Throughput, UseIntegratedCache, TLS
+  Repositories/
+    SoftDeleteCosmosRepository<T>    Generic base — CRUD, soft delete, batch, patch
+    UserRepository
+    TenantRepository
+    RoleRepository
+    ActionRepository
+    PermissionRepository
+    MigrationRepository
+    UsersCosmosDbManagerRepository   CreateDatabaseIfNotExistsAsync / DropDatabaseIfExistsAsync
+  Migrations/
+    IMigration                       public interface — Version + UpAsync
+    IMigrationService                internal interface — ApplyMigrationsAsync
+    MigrationService                 internal; discovers all IMigration from IEnumerable<IMigration>
+  CosmosDbExtensions                 UseUsersCosmosDb(IHost) — wires container config into configurator
+  Extensions/
+    HostExtensions                   UseUsersCosmosDbAsync / ApplyUsersMigrationsAsync
+  DependencyInjection                AddUsersCosmosDb(IConfiguration)
+
+Users.Infrastructure.CosmosDb.Migrations/
+  V20250501_202100_InitialSeed       First concrete migration (20 actions, 6 global roles, "The Force" root tenant)
+  DependencyInjection                AddUsersCosmosDbMigrations() — registers IMigration implementations
+```
+
+### `SoftDeleteCosmosRepository<T>` Capabilities
+
+The base class (ported from `Libraries.Shared.CSharp`) provides:
+
+- `AddAsync` / `AddMultipleAsync` — always clears `DeletedAt`/`DeletedBy` before insert
+- `UpdateAsync` / `UpdateMultipleAsync`
+- `GetAsync(id, partitionKey)` — returns `null` if soft-deleted
+- `GetIncludingDeletedAsync(id, partitionKey)` — bypasses soft-delete filter
+- `GetAllAsync(filterExpression?)` — optional dynamic LINQ filter via `System.Linq.Dynamic.Core`
+- `GetMultipleAsync(ids)` — batch read via `ReadManyItemsAsync`
+- `ExistsAsync(ids)` — bulk existence check, excludes soft-deleted
+- `DeleteAsync(id, partitionKey, deletedBy)` — soft delete
+- `DeleteMultipleAsync(entities, deletedBy)` — batch soft delete via `TransactionalBatch`
+- `ExecuteQueryAsync<T>` — protected query helper with iterator pagination
+- `ExecuteQueryWithParametersAsync` — auto-appends `(NOT IS_DEFINED(c.deletedAt) OR IS_NULL(c.deletedAt))`
+
+All queries automatically exclude soft-deleted documents unless using the `IncludingDeleted` variants.
+
+### Options Record
+
+```csharp
+public sealed record UsersInfrastructureCosmosDbOptions
+{
+    public const string ConfigSectionName = "Users:UsersInfrastructureCosmosDbOptions";
+
+    [Required] public required string ConnectionString { get; init; }
+    [Required] public required string DatabaseId       { get; init; }
+    [Required] public required int    Throughput       { get; init; }
+    [Required] public required bool   UseIntegratedCache { get; init; }
+
+    public bool IgnoreSslCertificateValidation { get; init; }  // set true for Docker Linux emulator
+}
+```
+
+For the Parallels Desktop CosmosDB emulator, `IgnoreSslCertificateValidation` should remain `false` (certificates are trusted on
+the host). For the Docker Linux emulator, set it to `true`.
+
+### DI Registration
+
+```csharp
+// In Program.cs (InitContainer) or DiCompositor.cs (HttpApi / FunctionApp1)
+services.AddUsersCosmosDb(configuration);           // registers options + repositories + migration service
+services.AddUsersCosmosDbMigrations();              // registers all IMigration implementations
+
+// After app.Build():
+app.UseUsersCosmosDb();                             // wires container config into CosmosDbConfigurator (sync)
+
+// Then explicitly via IUsersCosmosDbManagerRepository:
+await manager.CreateDatabaseIfNotExistsAsync();     // creates DB + containers
+
+// Run pending migrations:
+await app.ApplyUsersMigrationsAsync();
+```
+
+`AddUsersCosmosDb` calls `AddCosmosDb()` from `Libraries.Shared.CosmosDb` (registers shared infra singletons) then adds options,
+repositories, and `IMigrationService`. Container configuration is registered at run time via `UseUsersCosmosDb()` — this populates
+the `CosmosDbConfigurator` with per-entity container bindings before any DB operations run.
+
+### Serialization
+
+All entities use `[JsonProperty]` from Newtonsoft.Json. The `CosmosClient` must be configured with a Newtonsoft serializer:
+
+```csharp
+new CosmosClientOptions { Serializer = new CosmosNewtonsoftSerializer() }
+```
+
+### Authentication
+
+- **Azure**: `DefaultAzureCredential` (resolves to the user-assigned Managed Identity)
+- **Local**: `ConnectionString` in `CosmosDbOptions` (emulator well-known key)
+
+---
+
+## Provider Independence
+
+The `Contracts` layer contains only C# interfaces — zero Cosmos DB SDK references. Swapping the persistence backend requires:
+
+```
+                  ┌──────────────────────────────┐
+                  │  Users.Infrastructure        │
+                  │      .Contracts              │
+                  │  IUserRepository             │
+                  │  ITenantRepository  ...      │
+                  └──────────────┬───────────────┘
+                                 │ implements
+             ┌───────────────────┼────────────────────────┐
+             ▼                                             ▼
+┌────────────────────────┐              ┌──────────────────────────────┐
+│ Users.Infrastructure   │              │ Users.Infrastructure         │
+│ .CosmosDb              │              │ .EntityFramework  (future)   │
+│ UserRepository         │              │ EfUserRepository             │
+│ TenantRepository  ...  │              │ EfTenantRepository  ...      │
+└────────────────────────┘              └──────────────────────────────┘
+             │  only one active at a time
+             ▼
+  HttpApi / FunctionApp1
+  Program.cs / DiCompositor.cs
+  ─────────────────────────────
+  services.AddUsersCosmosDb(cfg);   ← swap this one line
+  await app.UseUsersCosmosDbAsync();           ← and this one
+```
+
+**To switch to Entity Framework:**
+
+1. Create `Users.Infrastructure.EntityFramework` referencing `Contracts` + `Entities`
+2. Implement every interface (`EfUserRepository : IUserRepository`, etc.)
+3. Add `AddUsersEntityFramework(IConfiguration)` extension
+4. In consuming projects: replace `AddUsersCosmosDb` → `AddUsersEntityFramework` and remove the Cosmos project reference
+
+No other changes needed.
+
+---
+
+## InitContainer
+
+`Users.InitContainer` is a .NET 8 console app that provisions the CosmosDB database and seeds initial data. It runs as a *
+*Container Apps Job** (Manual trigger) in Azure and as a Docker Compose service locally.
+
+### Initialization Sequence
+
+```mermaid
+flowchart TD
+    A[Start] --> B{UsersDropDatabaseIfExists?}
+    B -- yes --> C[Drop + Recreate database]
+    B -- no --> D[Create database if not exists]
+    C --> E[Create containers with index policies]
+    D --> E
+    E --> F[Apply migrations]
+    F --> G[Seed Actions]
+    G --> H[Seed Roles]
+    H --> I{TenantsSeed enabled?}
+    I -- yes --> J[Load tenants.json]
+    J --> K[Build parent-child tree]
+    K --> L[Process parents before children]
+    L --> M{UsersSeed enabled?}
+    I -- no --> M
+    M -- yes --> N[Discover user email directories]
+    N --> O[For each user: load user.json + permissions.json]
+    O --> P[Validate + upsert DbUser]
+    P --> Q[Resolve role names to IDs]
+    Q --> R[Upsert DbPermissions]
+    R --> S[Exit 0]
+    M -- no --> S
+```
+
+### Seed Data Layout
+
+Files live in `Users.InitContainer.Data/SeedData/` and are copied to the output directory (
+`CopyToOutputDirectory: PreserveNewest`). The runtime path is injected via `SeederOptions.SeedDataFilePath`.
+
+Actions and roles are **not** seeded from JSON files — they come from the migration. Only tenants and users use JSON seed files.
+
+```
+{SeedDataFilePath}/
+  users-db/
+    tenants.json              flat array — seeder builds tree, processes parent-first
+    users/
+      {user@email}/
+        user.json             DbUser document
+        permissions.json      REQUIRED — array of SeedPermission, one per tenant
+```
+
+**Rules:**
+
+- `permissions.json` is required for every user directory — missing file throws at seed time
+- Role assignments accept `roleId` (direct GUID) or `roleName` (seeder resolves to ID at runtime)
+- Seeding is idempotent — existing documents are skipped, safe to run multiple times
+
+### Star Wars seed data (Force Alignment theme)
+
+#### Tenant hierarchy (15 tenants)
+
+```
+The Force (Root, Node)  —  9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c  [migration]
+│
+├── Light Side          (Node)  —  3fa85f64-5717-4562-b3fc-2c963f66afa6
+│   ├── Jedi Order      (Node)  —  7c9e6679-7425-40de-944b-e07fc1f90ae7
+│   │   └── Jedi High Council   (Leaf)  —  8f14e45f-ceea-467a-a866-051f2e3b9aa6
+│   └── Galactic Republic (Node) —  9b74c989-abbe-4561-b3c8-2a52d28f40d2
+│       ├── Senate Chamber      (Leaf)  —  e3d7f8a2-1b3c-4d5e-9f0a-2b4c6d8e0f1a
+│       └── Tipoca City         (Leaf)  —  4a5b6c7d-8e9f-4012-b3c4-d5e6f7081920
+│
+├── Dark Side           (Node)  —  5b6c7d8e-9f01-4123-c4d5-e6f708192a3b
+│   ├── Sith Order      (Node)  —  6c7d8e9f-0112-4234-d5e6-f708192a3b4c
+│   │   └── Rule of Two         (Leaf)  —  7d8e9f01-1223-4345-e6f7-08192a3b4c5d
+│   └── Galactic Empire (Node)  —  8e9f0112-2334-4456-f708-192a3b4c5d6e
+│       ├── Imperial Senate     (Leaf)  —  9f012234-3445-4567-0819-2a3b4c5d6e7f
+│       └── Death Star Command  (Leaf)  —  a0123345-4556-4678-192a-3b4c5d6e7f80
+│
+└── Unaligned           (Node)  —  b1234456-5667-4789-2a3b-4c5d6e7f8091
+    ├── Mandalorians    (Node)  —  c2345567-6778-489a-3b4c-5d6e7f809102
+    │   └── The Covert          (Leaf)  —  d3456678-7889-49ab-4c5d-6e7f80910213
+    └── Bounty Hunters Guild    (Leaf)  —  e4567789-899a-4abc-5d6e-7f8091021324
+```
+
+#### Roles (6 global, seeded by migration)
+
+All roles have `TenantId = Guid.Empty` (global). Each is a strict subset of the role above it; `Users.EditOwnProfile` is included
+in every role.
+
+| Role                 | ID                                     | Key actions                                |
+|----------------------|----------------------------------------|--------------------------------------------|
+| **The Chosen One**   | `a50fcd0f-e253-41eb-98b3-ef02bbde476e` | All 20 actions                             |
+| **Council Member**   | `a1c2e3f4-5b6d-4789-abcd-ef0123456789` | Cross-tenant view/manage + tenant add/edit |
+| **Knight Commander** | `b2d3f4e5-6c7d-4890-bcde-f01234567890` | Full CRUD in own tenant + assign roles     |
+| **Knight**           | `c3e4f5f6-7d8e-4901-cdef-012345678901` | View/edit users in own tenant              |
+| **Padawan**          | `d4f5e6f7-8e9f-4a12-def0-123456789012` | View users in own tenant                   |
+| **Youngling**        | `e5f6f7e8-9fab-4b23-ef01-234567890123` | Edit own profile only                      |
+
+#### Action display names (20 actions)
+
+`ActionId` constants in code are unchanged — only the human-readable `name` field is themed.
+
+| ActionId                      | Display name                             |
+|-------------------------------|------------------------------------------|
+| `Tenants.View`                | View Galactic Orders                     |
+| `Module.Tenants`              | Access Galactic Orders Registry          |
+| `Tenants.Add`                 | Establish New Order                      |
+| `Tenants.Edit`                | Reorganize Order Structure               |
+| `Tenants.Delete`              | Dissolve Galactic Order                  |
+| `Module.Users`                | Access Force Registry                    |
+| `Users.View`                  | Sense Members of Own Order               |
+| `Users.View.AllTenants`       | Sense All Force Beings Across the Galaxy |
+| `Users.Add`                   | Recruit to Own Order                     |
+| `Users.Add.AllTenants`        | Recruit Across All Orders                |
+| `Users.Edit`                  | Modify Record in Own Order               |
+| `Users.Edit.AllTenants`       | Modify Records Across All Orders         |
+| `Users.AssignExplicitActions` | Grant Force Abilities Directly           |
+| `Users.AssignRoles`           | Bestow Force Rank                        |
+| `Users.Delete`                | Exile from Own Order                     |
+| `Users.Delete.AllTenants`     | Exile from the Galaxy                    |
+| `Users.EditOwnProfile`        | Update Own Holocron                      |
+| `Auth.GetRoles`               | Consult Rank Hierarchy of Own Order      |
+| `Auth.GetRoles.AllTenants`    | Consult All Rank Hierarchies             |
+| `Auth.GetActions`             | Access the Jedi Archives                 |
+
+#### System users (migration)
+
+| Character | UserId                                                   | Email               | Tenant           | Role         |
+|-----------|----------------------------------------------------------|---------------------|------------------|--------------|
+| **Jawa**  | `Root.SystemId` (`00000000-0000-0000-0000-000000000000`) | `jawa@the-force.sw` | The Force (root) | The Operator |
+
+#### Users (15 characters, seed data)
+
+| Character         | Email                            | Primary tenant                  | Role(s)                           |
+|-------------------|----------------------------------|---------------------------------|-----------------------------------|
+| Yoda              | `yoda@jedi-order.sw`             | The Force (root)                | The Chosen One                    |
+| Mace Windu        | `mace.windu@jedi-order.sw`       | Jedi High Council               | Council Member                    |
+| Obi-Wan Kenobi    | `obiwan.kenobi@jedi-order.sw`    | Jedi Order                      | Knight Commander                  |
+| Anakin Skywalker  | `anakin.skywalker@jedi-order.sw` | Jedi Order + Rule of Two        | Knight Commander / Council Member |
+| Padmé Amidala     | `padme.amidala@republic.sw`      | Senate Chamber                  | Knight Commander                  |
+| Captain Rex       | `captain.rex@republic.sw`        | Tipoca City                     | Knight                            |
+| Emperor Palpatine | `palpatine@sith-order.sw`        | Rule of Two + Imperial Senate   | The Chosen One / Council Member   |
+| Count Dooku       | `count.dooku@sith-order.sw`      | Rule of Two                     | Council Member                    |
+| Darth Vader       | `darth.vader@empire.sw`          | Death Star Command + Sith Order | Knight Commander (both)           |
+| Grand Moff Tarkin | `tarkin@empire.sw`               | Death Star Command              | Knight Commander                  |
+| Din Djarin        | `din.djarin@mandalorians.sw`     | The Covert                      | Knight Commander                  |
+| Bo-Katan Kryze    | `bo-katan@mandalorians.sw`       | Mandalorians + The Covert       | Council Member / Knight           |
+| Boba Fett         | `boba.fett@hunters.sw`           | Bounty Hunters Guild            | Knight Commander                  |
+| Luke Skywalker    | `luke.skywalker@rebel.sw`        | Jedi Order + Tipoca City        | Knight / Padawan                  |
+| Leia Organa       | `leia.organa@republic.sw`        | Senate Chamber + Tipoca City    | Council Member / Knight           |
+
+### SeederOptions
+
+```csharp
+public sealed record SeederOptions
+{
+    public const string ConfigSectionName = "SeederOptions";
+
+    [Required] public required bool   TenantsSeed     { get; init; }
+    [Required] public required bool   UsersSeed        { get; init; }
+    [Required] public required string SeedDataFilePath { get; init; }
+}
+```
+
+---
+
+## Migration Mechanism
+
+Schema and data migrations run exactly once per environment. Applied versions are recorded in the `migrations` CosmosDB container
+so re-runs skip them.
+
+### Container
+
+| Property      | Value        |
+|---------------|--------------|
+| Container     | `migrations` |
+| Partition key | `/id`        |
+| Document `id` | `Id` (GUID)  |
+
+No soft-delete — migrations are permanent records.
+
+### Interfaces
+
+`IMigration` is **public** (lives in `Users.Infrastructure.CosmosDb`) so that `Users.Infrastructure.CosmosDb.Migrations` and
+future migration assemblies can implement it. `IMigrationService` is **internal** — exposed to consumers only via the
+`ApplyUsersMigrationsAsync` extension method.
+
+```csharp
+// public — implementable from any project referencing Users.Infrastructure.CosmosDb
+public interface IMigration
+{
+    string Version { get; }   // sort key and uniqueness key — format: YYYYMMDD_HHMMSS_Description
+    Task UpAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken);
+}
+
+// internal — consumers use app.ApplyUsersMigrationsAsync() extension instead
+internal interface IMigrationService
+{
+    Task ApplyMigrationsAsync(CancellationToken cancellationToken);
+}
+```
+
+`UpAsync` receives `IServiceProvider` so each migration can resolve the repositories it needs.
+
+### `MigrationService` behaviour
+
+`MigrationService` receives `IEnumerable<IMigration>` via constructor injection — all registered `IMigration` singletons are
+discovered automatically. On each startup:
+
+1. Loads all applied versions from the `migrations` container
+2. Finds pending migrations (`Version` not in applied set)
+3. Sorts pending by `Version` ascending (lexicographic — the YYYYMMDD_HHMMSS prefix guarantees chronological order)
+4. Applies each, then writes a `DbMigration` record to commit it
+
+### Public entry point
+
+`IMigrationService` is internal. Consumers call the public extension method:
+
+```csharp
+// In Users.InitContainer/Program.cs
+await app.ApplyUsersMigrationsAsync(CancellationToken.None);
+```
+
+### Version naming convention
+
+```
+V{YYYYMMDD}_{HHMMSS}_{Description}
+```
+
+Example: `V20250501_202100_InitialSeed`
+
+Always use the **UTC timestamp** of when the migration was created. The `V` prefix and underscores are required for lexicographic
+sort correctness.
+
+### System-level constants (`Root` class)
+
+Fixed GUIDs and IDs used by migrations and seed data are centralized in `Users.Authorization.Constants/Root.cs`:
+
+```csharp
+public static class Root
+{
+    public static readonly Guid   SystemId       = Guid.Empty;
+    public static readonly string TenantId       = "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c";
+    public static readonly string SuperAdminRoleId = "a50fcd0f-e253-41eb-98b3-ef02bbde476e";
+}
+```
+
+Using well-known fixed values ensures migrations are reproducible and idempotent across environments.
+
+### First migration: `V20250501_202100_InitialSeed`
+
+Seeds the minimum bootstrap data that every new deployment needs. Located in `Users.Infrastructure.CosmosDb.Migrations`.
+
+| Type           | Details                                                                                                            |
+|----------------|--------------------------------------------------------------------------------------------------------------------|
+| Root tenant    | `TenantId = Root.TenantId` (`9d6e73c7-...`), `Name = "The Force"`, `TenantType = Node`, `ParentId = Root.SystemId` |
+| 20 actions     | All IDs from `TenantActions` (5), `UserActions` (12), `AuthActions` (3) — Star Wars-themed display names           |
+| 6 global roles | The Chosen One (all 20), Council Member, Knight Commander, Knight, Padawan, Youngling                              |
+
+All are idempotent: existing documents are skipped.
+
+### Adding a new migration
+
+1. Create `src/Users.Infrastructure.CosmosDb.Migrations/V{YYYYMMDD}_{HHMMSS}_{Description}.cs`
+2. Implement `IMigration` from `Users.Infrastructure.CosmosDb` as `internal sealed class`
+3. Register in `Users.Infrastructure.CosmosDb.Migrations/DependencyInjection.cs`:
+   ```csharp
+   services.AddSingleton<IMigration, V20250601_120000_AddSomething>();
+   ```
+4. `Users.InitContainer` calls `.AddUsersCosmosDbMigrations()` — all registered `IMigration` singletons are injected into
+   `MigrationService` as `IEnumerable<IMigration>` and executed in version order on startup.
+
+---
+
+## Local Development
+
+### Docker Compose
+
+Add `docker-compose.cosmosdb.yaml` alongside the existing compose files:
+
+```yaml
+services:
+  cosmosdb-emulator:
+    image: mcr.microsoft.com/cosmosdb/linux/azure-cosmos-emulator:vnext-EN20251223
+    environment:
+      - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=3
+      - AZURE_COSMOS_EMULATOR_ENABLE_DATA_PERSISTENCE=true
+    ports:
+      - "8081:8081"
+    volumes:
+      - ${VOLUMES_PATH}/cosmosdb/data:/tmp/cosmos/appdata
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "-k", "https://localhost:8081/_explorer/emulator.pem" ]
+      interval: 10s
+      retries: 30
+      start_period: 60s
+    networks:
+      - azure_container_apps_net
+
+  users-init-container:
+    image: ${USERS_INIT_CONTAINER_IMAGE}
+    depends_on:
+      cosmosdb-emulator:
+        condition: service_healthy
+    environment:
+      - Users__UsersInfrastructureCosmosDbOptions__ConnectionString=${COSMOSDB_CONNECTION_STRING}
+      - Users__UsersInfrastructureCosmosDbOptions__DatabaseId=${USERS_COSMOSDB_DATABASE}
+      - Users__UsersInfrastructureCosmosDbOptions__Throughput=400
+      - Users__UsersInfrastructureCosmosDbOptions__UseIntegratedCache=false
+      - Users__UsersInfrastructureCosmosDbOptions__IgnoreSslCertificateValidation=true
+      - UsersDropDatabaseIfExists=false
+      - SeederOptions__TenantsSeed=true
+      - SeederOptions__UsersSeed=true
+      - SeederOptions__SeedDataFilePath=/app/seed-data/users-db
+    volumes:
+      - ${SEED_DATA_PATH}:/app/seed-data
+    networks:
+      - azure_container_apps_net
+```
+
+### `.env.dev` Additions
+
+```env
+USERS_INIT_CONTAINER_IMAGE=users-init-container:1.0.0
+COSMOSDB_CONNECTION_STRING=AccountEndpoint=https://cosmosdb-emulator:8081/;AccountKey=C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD34b9n=;
+USERS_COSMOSDB_DATABASE=users-db
+SEED_DATA_PATH=./src/Users/Users.InitContainer.Data/SeedData
+```
+
+### Start Command
+
+```bash
+docker compose \
+  -f docker-compose.yaml \
+  -f docker-compose.observability.yaml \
+  -f docker-compose.cosmosdb.yaml \
+  --env-file .env.dev \
+  -p my-container-apps up --build --remove-orphans
+```
+
+The emulator explorer is available at `https://localhost:8081/_explorer/index.html` once healthy.
+
+---
+
+## Azure Deployment (Bicep)
+
+Three new Bicep modules are required:
+
+| Module                                                          | Resource created                                 |
+|-----------------------------------------------------------------|--------------------------------------------------|
+| `infrastructure/modules/cosmosdb.bicep`                         | CosmosDB account + `users-db` database           |
+| `infrastructure/modules/helpers/cosmosdb-role-assignment.bicep` | Data Contributor role for user-assigned identity |
+| `infrastructure/modules/helpers/init-container-job.bicep`       | Container Apps Job (Manual trigger)              |
+
+The CosmosDB account uses **Serverless** capacity for `dev`/`tst` and **Autoscale provisioned** for `prd`. Session consistency is
+the default.
+
+Wiring in `main.bicep`:
+
+```bicep
+module cosmosDb './modules/cosmosdb.bicep' = { ... dependsOn: [applicationResourceGroup] }
+module cosmosDbRoleAssignment './modules/helpers/cosmosdb-role-assignment.bicep' = { ... dependsOn: [cosmosDb, userAssignIdentity] }
+module usersInitContainerJob './modules/helpers/init-container-job.bicep' = { ... dependsOn: [cosmosDb, cosmosDbRoleAssignment, applicationContainerAppsEnvironment] }
+```
+
+---
+
+## DiCompositor Pattern
+
+Consuming projects use a `DiCompositor.cs` (static extension class) to keep `Program.cs` minimal:
+
+```csharp
+// HttpApi/DiCompositor.cs
+public static class DiCompositor
+{
+    public static void ConfigureInstrumentation(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddSingleton<HttpApiInstrumentation>();
+    }
+
+    public static void ConfigureServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddUsersCosmosDb(configuration);
+        services.AddUsersCosmosDbMigrations();
+    }
+}
+
+// HttpApi/Program.cs
+builder.ConfigureInstrumentation();
+builder.Services.ConfigureServices(builder.Configuration);
+var app = builder.Build();
+app.UseUsersCosmosDb();                          // wires container config (sync)
+var manager = app.Services.GetRequiredService<IUsersCosmosDbManagerRepository>();
+await manager.CreateDatabaseIfNotExistsAsync();  // creates DB + containers
+await app.ApplyUsersMigrationsAsync();           // runs pending migrations
+```
+
+`AddUsersCosmosDb` internally calls `AddOptionsAndValidateOnStart<UsersInfrastructureCosmosDbOptions>` — missing required
+configuration fields fail the app immediately at startup with a descriptive error rather than at first use.
+
+---
+
+## Claude Code Skills
+
+Four slash commands in `.claude/commands/` assist with development:
+
+| Command                       | Purpose                                                        |
+|-------------------------------|----------------------------------------------------------------|
+| `/scaffold-cosmos-repository` | Generate `{Entity}Repository.cs` from template and wire DI     |
+| `/run-users-init-container`   | Run init container locally against the Docker Compose emulator |
+| `/add-seed-data`              | Add a new user or tenant to the seed data files interactively  |
+| `/check-cosmos-container`     | Query local emulator and display item counts per container     |
+
+---
+
+## Verification Checklist
+
+- [x] `dotnet build` passes with 0 errors for all 9 Users projects (verified 2026-05-02)
+- [ ] `docker compose -f docker-compose.yaml -f docker-compose.cosmosdb.yaml --env-file .env.dev up` starts emulator healthy
+- [ ] `users-init-container` service exits with code 0
+- [ ] Emulator explorer at `https://localhost:8081/_explorer/index.html` shows `users-db` with 6 containers and expected seed
+  counts: users=15, tenants=15, roles=6, actions=20, permissions=20, migrations=1
+- [ ] `az deployment sub what-if` shows three new Azure resources without errors
+- [ ] Consuming project (`HttpApi`) compiles with `AddUsersCosmosDb` + `AddUsersCosmosDbMigrations` in `DiCompositor.cs`

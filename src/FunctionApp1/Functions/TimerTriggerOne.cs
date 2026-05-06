@@ -10,8 +10,11 @@ public class TimerTriggerOne(ILogger<TimerTriggerOne> logger)
     public void Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer)
     {
         Activity? act = Activity.Current;
-        if (act != null) act.DisplayName = "Func.TimerTriggerOne";
-        
+        if (act != null)
+        {
+            act.DisplayName = "Func.TimerTriggerOne";
+        }
+
         logger.LogDebug("1_Testing Log Debug");
 
         logger.LogTrace("1_Testing Log Trace");
@@ -23,7 +26,7 @@ public class TimerTriggerOne(ILogger<TimerTriggerOne> logger)
         logger.LogError("1_Testing Log Error");
 
         logger.LogCritical("1_Testing Log Critical");
-        
+
         if (myTimer.ScheduleStatus is not null)
         {
             logger.LogInformation("Next timer schedule at: {ScheduleStatusNext}", myTimer.ScheduleStatus.Next);

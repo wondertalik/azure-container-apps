@@ -1,0 +1,178 @@
+[
+  {
+    "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "name": "Light Side",
+    "parentId": "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "name": "Jedi Order",
+    "parentId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "8f14e45f-ceea-467a-a866-051f2e3b9aa6",
+    "name": "Jedi High Council",
+    "parentId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "9b74c989-abbe-4561-b3c8-2a52d28f40d2",
+    "name": "Galactic Republic",
+    "parentId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "e3d7f8a2-1b3c-4d5e-9f0a-2b4c6d8e0f1a",
+    "name": "Senate Chamber",
+    "parentId": "9b74c989-abbe-4561-b3c8-2a52d28f40d2",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "4a5b6c7d-8e9f-4012-b3c4-d5e6f7081920",
+    "name": "Tipoca City",
+    "parentId": "9b74c989-abbe-4561-b3c8-2a52d28f40d2",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "5b6c7d8e-9f01-4123-c4d5-e6f708192a3b",
+    "name": "Dark Side",
+    "parentId": "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "6c7d8e9f-0112-4234-d5e6-f708192a3b4c",
+    "name": "Sith Order",
+    "parentId": "5b6c7d8e-9f01-4123-c4d5-e6f708192a3b",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "7d8e9f01-1223-4345-e6f7-08192a3b4c5d",
+    "name": "Rule of Two",
+    "parentId": "6c7d8e9f-0112-4234-d5e6-f708192a3b4c",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "8e9f0112-2334-4456-f708-192a3b4c5d6e",
+    "name": "Galactic Empire",
+    "parentId": "5b6c7d8e-9f01-4123-c4d5-e6f708192a3b",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "9f012234-3445-4567-0819-2a3b4c5d6e7f",
+    "name": "Imperial Senate",
+    "parentId": "8e9f0112-2334-4456-f708-192a3b4c5d6e",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "a0123345-4556-4678-192a-3b4c5d6e7f80",
+    "name": "Death Star Command",
+    "parentId": "8e9f0112-2334-4456-f708-192a3b4c5d6e",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "b1234456-5667-4789-2a3b-4c5d6e7f8091",
+    "name": "Unaligned",
+    "parentId": "9d6e73c7-c5e0-4a6b-a23d-1a307cdcf30c",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "c2345567-6778-489a-3b4c-5d6e7f809102",
+    "name": "Mandalorians",
+    "parentId": "b1234456-5667-4789-2a3b-4c5d6e7f8091",
+    "childIds": [],
+    "tenantType": "Node",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "d3456678-7889-49ab-4c5d-6e7f80910213",
+    "name": "The Covert",
+    "parentId": "c2345567-6778-489a-3b4c-5d6e7f809102",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  },
+  {
+    "id": "e4567789-899a-4abc-5d6e-7f8091021324",
+    "name": "Bounty Hunters Guild",
+    "parentId": "b1234456-5667-4789-2a3b-4c5d6e7f8091",
+    "childIds": [],
+    "tenantType": "Leaf",
+    "createdAt": "2025-05-01T00:00:00Z",
+    "createdBy": "11380000-0000-4000-8000-000000000001",
+    "updatedAt": "2025-05-01T00:00:00Z",
+    "updatedBy": "11380000-0000-4000-8000-000000000001"
+  }
+]

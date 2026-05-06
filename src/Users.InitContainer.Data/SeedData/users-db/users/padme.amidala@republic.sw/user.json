@@ -1,0 +1,19 @@
+{
+  "id": "12233445-5667-4456-abcd-ef1234567878",
+  "firstname": "Padmé",
+  "lastname": "Amidala",
+  "email": "padme.amidala@republic.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "e3d7f8a2-1b3c-4d5e-9f0a-2b4c6d8e0f1a",
+  "tenantAssignments": [
+    {
+      "tenantId": "e3d7f8a2-1b3c-4d5e-9f0a-2b4c6d8e0f1a",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

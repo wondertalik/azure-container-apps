@@ -1,0 +1,8 @@
+[
+  {
+    "tenantId": "e4567789-899a-4abc-5d6e-7f8091021324",
+    "roleAssignments": [
+      { "roleName": "Knight Commander" }
+    ]
+  }
+]

@@ -13,8 +13,11 @@ public class HealthCheck(ILogger<HealthCheck> logger)
     public IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "health")] HttpRequestData req)
     {
         Activity? act = Activity.Current;
-        if (act != null) act.DisplayName = "Func.HealthCheck";
-        
+        if (act != null)
+        {
+            act.DisplayName = "Func.HealthCheck";
+        }
+
         logger.LogInformation("Health check requested");
 
         try
@@ -27,11 +30,11 @@ public class HealthCheck(ILogger<HealthCheck> logger)
             logger.LogError(ex, "Health check failed: {ExMessage}", ex.Message);
 
             return new ObjectResult(new HealthCheckResponseError(
-                Status: "Unhealthy",
-                Version: Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION") ?? "Unknown",
-                Timestamp: DateTimeOffset.UtcNow,
-                Service: "FunctionApp1",
-                ErrorMessage: ex.Message
+                "Unhealthy",
+                Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION") ?? "Unknown",
+                DateTimeOffset.UtcNow,
+                "FunctionApp1",
+                ex.Message
             ))
             {
                 StatusCode = (int?) HttpStatusCode.ServiceUnavailable
@@ -44,10 +47,10 @@ public class HealthCheck(ILogger<HealthCheck> logger)
         string version = Environment.GetEnvironmentVariable("OTEL_SERVICE_VERSION") ?? "Unknown";
 
         return new HealthCheckResponse(
-            Status: "Healthy",
-            Version: version,
-            Timestamp: DateTimeOffset.UtcNow,
-            Service: "FunctionApp1"
+            "Healthy",
+            version,
+            DateTimeOffset.UtcNow,
+            "FunctionApp1"
         );
     }
 

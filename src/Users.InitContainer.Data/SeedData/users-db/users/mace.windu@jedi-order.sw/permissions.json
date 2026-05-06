@@ -1,0 +1,8 @@
+[
+  {
+    "tenantId": "8f14e45f-ceea-467a-a866-051f2e3b9aa6",
+    "roleAssignments": [
+      { "roleName": "Council Member" }
+    ]
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "id": "f6011223-3445-4234-abcd-ef1234567856",
+  "firstname": "Obi-Wan",
+  "lastname": "Kenobi",
+  "email": "obiwan.kenobi@jedi-order.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+  "tenantAssignments": [
+    {
+      "tenantId": "7c9e6679-7425-40de-944b-e07fc1f90ae7",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

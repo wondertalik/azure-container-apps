@@ -34,7 +34,7 @@ public static class OpenTelemetryExtensions
 
         return services;
     }
-    
+
     public static void AddOpenTelemetryLogsInstrumentation(this ILoggingBuilder builder,
         IConfiguration configuration, Action<OpenTelemetryLoggerOptions>? configureLoggerOptions = null)
     {
@@ -46,7 +46,7 @@ public static class OpenTelemetryExtensions
             options.IncludeFormattedMessage = true;
             options.IncludeScopes = true;
             configureLoggerOptions?.Invoke(options);
-            
+
             string? otelcolUrl = configuration["OTELCOL_URL"];
             if (!string.IsNullOrEmpty(otelcolUrl))
             {
@@ -67,7 +67,9 @@ public static class OpenTelemetryExtensions
             }
 
             if (otelOltpLogsOptions?.ConsoleExporter ?? false)
+            {
                 options.AddConsoleExporter();
+            }
         });
     }
 
@@ -88,7 +90,7 @@ public static class OpenTelemetryExtensions
                 .AddMeter("Microsoft.AspNetCore.Server.Kestrel");
 
             configureMeterProviderBuilder?.Invoke(meterBuilder);
-            
+
             string? otelcolUrl = configuration["OTELCOL_URL"];
 
             if (!string.IsNullOrEmpty(otelcolUrl))
@@ -110,7 +112,9 @@ public static class OpenTelemetryExtensions
             }
 
             if (otelOltpMetricsOptions?.ConsoleExporter ?? false)
+            {
                 meterBuilder.AddConsoleExporter();
+            }
         });
 
         return services;
@@ -152,41 +156,53 @@ public static class OpenTelemetryExtensions
                     //do not send sentry request to otel collector
                     bool excludeSentryEvent = message.RequestUri?.Host.Contains(".sentry.io") ?? false;
                     if (excludeSentryEvent)
+                    {
                         return false;
-                    
+                    }
+
                     //do not send seq request to otel collector
                     bool excludeSeqEvent = message.RequestUri?.AbsolutePath.Equals("/api/events/raw") ?? false;
                     if (excludeSeqEvent)
+                    {
                         return false;
+                    }
 
                     //do not send seq request to otel collector
                     bool excludeLiveDiagnosticsEvent =
                         message.RequestUri?.Host.Contains(".livediagnostics.monitor.azure.com") ?? false;
                     if (excludeLiveDiagnosticsEvent)
+                    {
                         return false;
+                    }
 
                     //do not send seq request to otel collector
                     bool excludeApplicationInsightsEvent =
                         message.RequestUri?.Host.Contains("applicationinsights.azure.com") ?? false;
                     if (excludeApplicationInsightsEvent)
+                    {
                         return false;
+                    }
 
                     bool excludeAzureFunctionsEvent =
                         message.RequestUri?.AbsolutePath.Equals("/AzureFunctionsRpcMessages.FunctionRpc/EventStream") ??
                         false;
                     if (excludeAzureFunctionsEvent)
+                    {
                         return false;
+                    }
 
                     bool excludeAzureFunctionsHostMeta = message.RequestUri?.Host.Equals("169.254.169.254") ?? false;
                     if (excludeAzureFunctionsHostMeta)
+                    {
                         return false;
+                    }
 
                     return true;
                 };
             });
 
             configureTracerProviderBuilder?.Invoke(tracing);
-            
+
             string? otelcolUrl = configuration["OTELCOL_URL"];
 
             if (!string.IsNullOrEmpty(otelcolUrl))
@@ -208,7 +224,9 @@ public static class OpenTelemetryExtensions
             }
 
             if (otelOltpTracingOptions?.ConsoleExporter ?? false)
+            {
                 tracing.AddConsoleExporter();
+            }
         });
 
         return services;
@@ -233,8 +251,11 @@ public static class OpenTelemetryExtensions
         this IServiceCollection services, IConfiguration configuration, IOpenTelemetryBuilder otel)
     {
         string? serviceName = configuration["OTEL_SERVICE_NAME"];
-        if (string.IsNullOrWhiteSpace(serviceName)) return services;
-        
+        if (string.IsNullOrWhiteSpace(serviceName))
+        {
+            return services;
+        }
+
         string? serviceVersion = configuration["OTEL_SERVICE_VERSION"];
 
         otel.ConfigureResource(resource =>
@@ -247,7 +268,9 @@ public static class OpenTelemetryExtensions
 
             string? environment = configuration["ASPNETCORE_ENVIRONMENT"];
             if (!string.IsNullOrWhiteSpace(environment))
+            {
                 attributes.Add("deployment.environment", environment);
+            }
 
             resource.AddAttributes(attributes);
         });

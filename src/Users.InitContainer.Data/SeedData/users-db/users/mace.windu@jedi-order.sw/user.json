@@ -1,0 +1,19 @@
+{
+  "id": "e5f60112-2334-4123-abcd-ef1234567845",
+  "firstname": "Mace",
+  "lastname": "Windu",
+  "email": "mace.windu@jedi-order.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "8f14e45f-ceea-467a-a866-051f2e3b9aa6",
+  "tenantAssignments": [
+    {
+      "tenantId": "8f14e45f-ceea-467a-a866-051f2e3b9aa6",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

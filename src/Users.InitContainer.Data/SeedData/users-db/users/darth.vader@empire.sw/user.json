@@ -1,0 +1,24 @@
+{
+  "id": "56677889-9aab-489a-bcde-f12345678901",
+  "firstname": "Darth",
+  "lastname": "Vader",
+  "email": "darth.vader@empire.sw",
+  "accountEnabled": true,
+  "defaultTenantId": "a0123345-4556-4678-192a-3b4c5d6e7f80",
+  "tenantAssignments": [
+    {
+      "tenantId": "a0123345-4556-4678-192a-3b4c5d6e7f80",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    },
+    {
+      "tenantId": "6c7d8e9f-0112-4234-d5e6-f708192a3b4c",
+      "createdAt": "2025-05-01T00:00:00Z",
+      "createdBy": "11380000-0000-4000-8000-000000000001"
+    }
+  ],
+  "createdAt": "2025-05-01T00:00:00Z",
+  "createdBy": "11380000-0000-4000-8000-000000000001",
+  "updatedAt": "2025-05-01T00:00:00Z",
+  "updatedBy": "11380000-0000-4000-8000-000000000001"
+}

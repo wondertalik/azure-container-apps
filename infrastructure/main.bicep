@@ -48,6 +48,28 @@ param httpApiContainerAppScaleMaxReplicas int = 3
 @description('Enable health probes for the container app')
 param enableHttpApiContainerAppHealthProbes bool = false
 
+// Users CosmosDB
+@description('CosmosDB account name for Users module')
+param usersCosmosDbAccountName string = ''
+
+@description('CosmosDB database name for Users module')
+param usersCosmosDbDatabaseName string = 'users-db'
+
+@description('Use serverless capacity mode for Users CosmosDB')
+param usersCosmosDbServerless bool = true
+
+@description('Enable CosmosDB and Users init container job')
+param enableUsersModule bool = false
+
+@description('Full image reference for Users.InitContainer job')
+param usersInitContainerImage string = 'mcr.microsoft.com/k8se/quickstart:latest'
+
+@description('Whether to seed tenants during Users init')
+param usersInitTenantsSeed bool = false
+
+@description('Whether to seed users during Users init')
+param usersInitUsersSeed bool = false
+
 // FunctionApp1
 @description('Full image name of the azure function container app')
 param functionApp1Image string = 'mcr.microsoft.com/azure-functions/dotnet8-quickstart-demo:1.0'
@@ -177,4 +199,49 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
   }
   scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [keyVault]
+}
+
+// Users module: CosmosDB account + database
+module usersCosmosDb './modules/cosmosdb.bicep' = if (enableUsersModule) {
+  name: 'usersCosmosDb'
+  params: {
+    location: location
+    projectName: projectName
+    targetEnvironment: targetEnvironment
+    cosmosDbAccountName: usersCosmosDbAccountName
+    cosmosDbDatabaseName: usersCosmosDbDatabaseName
+    serverless: usersCosmosDbServerless
+  }
+  scope: az.resourceGroup(applicationResourceGroup.name)
+}
+
+// Users module: grant Managed Identity Cosmos DB Built-in Data Contributor
+module usersCosmosDbRoleAssignment './modules/helpers/cosmosdb-role-assignment.bicep' = if (enableUsersModule) {
+  name: 'usersCosmosDbRoleAssignment'
+  params: {
+    cosmosDbAccountName: usersCosmosDb.outputs.cosmosDbAccountName
+    principalId: userAssignIdentity.outputs.identityPrincipalId
+  }
+  scope: az.resourceGroup(applicationResourceGroup.name)
+  dependsOn: [usersCosmosDb]
+}
+
+// Users module: InitContainer job (Manual trigger, run by pipeline)
+module usersInitContainerJob './modules/helpers/init-container-job.bicep' = if (enableUsersModule) {
+  name: 'usersInitContainerJob'
+  params: {
+    location: location
+    projectName: projectName
+    targetEnvironment: targetEnvironment
+    containerAppsEnvironmentName: applicationContainerAppsEnvironment.outputs.containerAppsEnvironmentName
+    userAssignedIdentityName: userAssignIdentity.outputs.identityName
+    azureContainerRegistryName: azureContainerRegistryName
+    initContainerImage: usersInitContainerImage
+    cosmosDbEndpoint: usersCosmosDb.outputs.cosmosDbEndpoint
+    cosmosDbDatabaseName: usersCosmosDbDatabaseName
+    tenantsSeed: usersInitTenantsSeed
+    usersSeed: usersInitUsersSeed
+  }
+  scope: az.resourceGroup(applicationResourceGroup.name)
+  dependsOn: [usersCosmosDbRoleAssignment]
 }
