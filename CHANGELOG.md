@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.2.0](https://github.com/wondertalik/azure-container-apps/compare/v1.1.2...v1.2.0) (2026-05-06)
+
+
+### Features
+
+* add basic users module ([#15](https://github.com/wondertalik/azure-container-apps/issues/15)) ([4350d44](https://github.com/wondertalik/azure-container-apps/commit/4350d442bfd5ab31ff6ef16f6bda9b5d5816bd3b))
+
+
+### Dependencies
+
+* issues-11 update dependencies, improve docs, docker compose configuration ([#12](https://github.com/wondertalik/azure-container-apps/issues/12)) ([907a6c4](https://github.com/wondertalik/azure-container-apps/commit/907a6c494471aa587989081484e1c60e4fd5a2fe))
+
+
+### Continuous Integration
+
+* update bicep infrastructure ([#14](https://github.com/wondertalik/azure-container-apps/issues/14)) ([bc36eb7](https://github.com/wondertalik/azure-container-apps/commit/bc36eb7f7b3e66f680f182edf4425cad1300b004))
+
 ## [1.1.2](https://github.com/wondertalik/azure-container-apps/compare/v1.1.1...v1.1.2) (2026-01-05)
 
 
