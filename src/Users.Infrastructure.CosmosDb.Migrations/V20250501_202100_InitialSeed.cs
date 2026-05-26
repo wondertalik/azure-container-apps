@@ -37,8 +37,8 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
     {
         var actions = new[]
         {
-            (TenantActions.TenantsView, "View Galactic Orders"),
             (TenantActions.ModuleTenants, "Access Galactic Orders Registry"),
+            (TenantActions.TenantsView, "View Galactic Orders"),
             (TenantActions.TenantsAdd, "Establish New Order"),
             (TenantActions.TenantsEdit, "Reorganize Order Structure"),
             (TenantActions.TenantsDelete, "Dissolve Galactic Order"),
@@ -84,8 +84,8 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
                 TenantId = Root.TenantId,
                 ActionIds =
                 [
-                    TenantActions.TenantsView,
                     TenantActions.ModuleTenants,
+                    TenantActions.TenantsView,
                     TenantActions.TenantsAdd,
                     TenantActions.TenantsEdit,
                     TenantActions.TenantsDelete,
@@ -113,8 +113,8 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
                 TenantId = Root.SystemId,
                 ActionIds =
                 [
-                    TenantActions.TenantsView,
                     TenantActions.ModuleTenants,
+                    TenantActions.TenantsView,
                     TenantActions.TenantsAdd,
                     TenantActions.TenantsEdit,
                     UserActions.ModuleUsers,
@@ -134,8 +134,8 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
                 TenantId = Root.SystemId,
                 ActionIds =
                 [
-                    TenantActions.TenantsView,
                     TenantActions.ModuleTenants,
+                    TenantActions.TenantsView,
                     UserActions.ModuleUsers,
                     UserActions.UsersView,
                     UserActions.UsersAdd,
@@ -194,8 +194,8 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
                 TenantId = Root.TenantId,
                 ActionIds =
                 [
-                    TenantActions.TenantsView,
                     TenantActions.ModuleTenants,
+                    TenantActions.TenantsView,
                     TenantActions.TenantsAdd,
                     TenantActions.TenantsEdit,
                     TenantActions.TenantsDelete,
@@ -262,7 +262,7 @@ internal sealed class V20250501_202100_InitialSeed : IMigration
         DateTimeOffset now,
         CancellationToken cancellationToken)
     {
-        var systemUserId = Root.SystemId;
+        string systemUserId = Root.SystemId;
 
         var existingUser = await userRepository.GetAsync(systemUserId, cancellationToken);
         if (existingUser is null)
