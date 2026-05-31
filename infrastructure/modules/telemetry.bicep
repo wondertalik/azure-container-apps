@@ -10,6 +10,9 @@ param targetEnvironment string
 @description('Prefix of user telemetry resources')
 param namePrefix string
 
+@description('Daily quota in GB for Log Analytics workspace (-1 for unlimited)')
+param dailyQuotaGb string = '-1'
+
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02-01' = {
   name: 'log-${namePrefix}-${location}-${projectName}-${targetEnvironment}'
   location: location
@@ -19,7 +22,7 @@ resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2025-02
       name: 'PerGB2018'
     }
     workspaceCapping: {
-      dailyQuotaGb: -1
+      dailyQuotaGb: json(dailyQuotaGb)
     }
   }
 }

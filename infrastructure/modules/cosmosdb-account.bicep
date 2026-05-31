@@ -10,14 +10,11 @@ param targetEnvironment string
 @description('CosmosDB account name')
 param cosmosDbAccountName string = '${projectName}-${targetEnvironment}-cosmos'
 
-@description('CosmosDB database name')
-param cosmosDbDatabaseName string = 'users-db'
-
 @description('Use serverless capacity mode (recommended for dev/test)')
 param serverless bool = true
 
-@description('Provisioned throughput in RU/s — used only when serverless is false')
-param throughput int = 400
+@description('Enable free tier for this CosmosDB account (limit: 1 per subscription)')
+param enableFreeTier bool = false
 
 resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   name: cosmosDbAccountName
@@ -27,6 +24,8 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
     databaseAccountOfferType: 'Standard'
     consistencyPolicy: {
       defaultConsistencyLevel: 'Session'
+      maxIntervalInSeconds: 5
+      maxStalenessPrefix: 100
     }
     locations: [
       {
@@ -36,8 +35,17 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
       }
     ]
     capabilities: serverless ? [{ name: 'EnableServerless' }] : []
-    enableFreeTier: false
+    enableFreeTier: enableFreeTier
+    enableAutomaticFailover: !serverless
+    enableMultipleWriteLocations: false
+    isVirtualNetworkFilterEnabled: false
     disableLocalAuth: false
+    backupPolicy: {
+      type: 'Continuous'
+      continuousModeProperties: {
+        tier: 'Continuous7Days'
+      }
+    }
   }
   tags: {
     project: projectName
@@ -45,20 +53,6 @@ resource cosmosDbAccount 'Microsoft.DocumentDB/databaseAccounts@2024-11-15' = {
   }
 }
 
-resource cosmosDbDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2024-11-15' = {
-  parent: cosmosDbAccount
-  name: cosmosDbDatabaseName
-  properties: {
-    resource: {
-      id: cosmosDbDatabaseName
-    }
-    options: serverless ? {} : {
-      throughput: throughput
-    }
-  }
-}
-
 output cosmosDbAccountName string = cosmosDbAccount.name
 output cosmosDbAccountId string = cosmosDbAccount.id
-output cosmosDbDatabaseName string = cosmosDbDatabase.name
 output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
