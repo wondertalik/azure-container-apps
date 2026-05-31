@@ -98,6 +98,9 @@ services:
       - 18889:18889 # grpc
       - 18890:18890 # http
     environment:
+      - ASPNETCORE_URLS=https://0.0.0.0:18888
+      - ASPIRE_DASHBOARD_OTLP_ENDPOINT_URL=https://0.0.0.0:18889
+      - ASPIRE_DASHBOARD_OTLP_HTTP_ENDPOINT_URL=https://0.0.0.0:18890
       - DASHBOARD__OTLP__AUTHMODE=ApiKey
       - DASHBOARD__OTLP__PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
       - Dashboard:Frontend:AuthMode=Unsecured
@@ -105,9 +108,18 @@ services:
       - DASHBOARD__TELEMETRYLIMITS__MAXTRACECOUNT=150000
       - DASHBOARD__TELEMETRYLIMITS__MAXMETRICSCOUNT=100000
       - DASHBOARD__OTLP__CORS__ALLOWEDORIGINS=*
+      - DASHBOARD__MCP__DISABLED=true
+      - DASHBOARD__MCP__AUTHMODE=ApiKey
+      - DASHBOARD__MCP__PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
+      - DASHBOARD__API__AUTHMODE=ApiKey
+      - DASHBOARD__API__PRIMARYAPIKEY=${ASPIRE_DASHBOARD_OTLP_PRIMARYAPIKEY}
+      - Kestrel__Certificates__Default__Path=/certs/dev.crt
+      - Kestrel__Certificates__Default__KeyPath=/certs/dev.key
     #      - DOTNET_DASHBOARD_UNSECURED_ALLOW_ANONYMOUS=true
     volumes:
       - ${VOLUMES_PATH}/aspire-dashboard/DataProtection-Keys:/home/app/.aspnet/DataProtection-Keys
+      - ./certs/${HTTPS_CERT_NAME_CRT}:/certs/dev.crt:ro
+      - ./certs/${HTTPS_CERT_NAME_KEY}:/certs/dev.key:ro
     networks:
       - azure_container_apps_net
   
