@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.2.0](https://github.com/wondertalik/azure-container-apps/compare/v1.1.2...v1.2.0) (2026-05-31)
+
+
+### Features
+
+* add basic users module ([#15](https://github.com/wondertalik/azure-container-apps/issues/15)) ([4350d44](https://github.com/wondertalik/azure-container-apps/commit/4350d442bfd5ab31ff6ef16f6bda9b5d5816bd3b))
+
+
+### Code Refactoring
+
+* add CosmosDB account and database modules with configurable parameters ([#17](https://github.com/wondertalik/azure-container-apps/issues/17)) ([fda646a](https://github.com/wondertalik/azure-container-apps/commit/fda646a01c9ac7653bb07c986ed8295a1fc77e8d))
+
+
+### Dependencies
+
+* issues-11 update dependencies, improve docs, docker compose configuration ([#12](https://github.com/wondertalik/azure-container-apps/issues/12)) ([907a6c4](https://github.com/wondertalik/azure-container-apps/commit/907a6c494471aa587989081484e1c60e4fd5a2fe))
+* update packages ([#16](https://github.com/wondertalik/azure-container-apps/issues/16)) ([313fbc8](https://github.com/wondertalik/azure-container-apps/commit/313fbc80b3f806dae9e10265124dcadfe2d77f56))
+
+
+### Continuous Integration
+
+* update bicep infrastructure ([#14](https://github.com/wondertalik/azure-container-apps/issues/14)) ([bc36eb7](https://github.com/wondertalik/azure-container-apps/commit/bc36eb7f7b3e66f680f182edf4425cad1300b004))
+
+
+### Agents
+
+* update .NET SDK and ASP.NET Core runtime versions to 8.0.421 ([#18](https://github.com/wondertalik/azure-container-apps/issues/18)) ([6c8b959](https://github.com/wondertalik/azure-container-apps/commit/6c8b95984cbdda32907e4354812e65f51c23def3))
+
 ## [1.1.2](https://github.com/wondertalik/azure-container-apps/compare/v1.1.1...v1.1.2) (2026-01-05)
 
 
