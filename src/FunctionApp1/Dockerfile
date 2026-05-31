@@ -1,5 +1,5 @@
 # This stage is used when running from VS in fast mode (Default for Debug configuration)
-FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4.1048.200-2-dotnet-isolated8.0 AS base
+FROM mcr.microsoft.com/azure-functions/dotnet-isolated:4.1048.200-9-dotnet-isolated8.0 AS base
 WORKDIR /home/site/wwwroot
 EXPOSE 8080
 
@@ -21,7 +21,7 @@ RUN --mount=type=secret,id=dev-crt,target=/tmp/dev.crt \
     update-ca-certificates
 
 # This stage is used to build the service project
-FROM mcr.microsoft.com/dotnet/sdk:8.0.420 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.421 AS build
 ARG BUILD_CONFIGURATION=Release
 
 WORKDIR /app
