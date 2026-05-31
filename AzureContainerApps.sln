@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# 
+#
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FunctionApp1", "src\FunctionApp1\FunctionApp1.csproj", "{CC335E32-C168-436B-A3A0-CA50C5535931}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HttpApi", "src\HttpApi\HttpApi.csproj", "{FFEE0A5B-E8D2-49AA-A773-8C309AADB70E}"
