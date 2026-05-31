@@ -16,7 +16,7 @@ RUN --mount=type=secret,id=dev-crt,target=/tmp/dev.crt \
     cat /usr/local/share/ca-certificates/dev.crt >> /etc/ssl/certs/ca-certificates.crt && \
     update-ca-certificates
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.420 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.421 AS build
 ARG TARGETARCH
 ARG BUILD_CONFIGURATION=Release
 
