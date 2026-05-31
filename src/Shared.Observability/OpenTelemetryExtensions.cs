@@ -152,53 +152,29 @@ public static class OpenTelemetryExtensions
             tracing.AddHttpClientInstrumentation(options =>
             {
                 options.FilterHttpRequestMessage = message =>
-                {
-                    //do not send sentry request to otel collector
-                    bool excludeSentryEvent = message.RequestUri?.Host.Contains(".sentry.io") ?? false;
-                    if (excludeSentryEvent)
+                    HttpRequestMessageFilter.ShouldTrace(message, msg =>
                     {
-                        return false;
-                    }
+                        //do not send seq request to otel collector
+                        if (msg.RequestUri?.AbsolutePath.Equals("/api/events/raw") ?? false)
+                        {
+                            return false;
+                        }
 
-                    //do not send seq request to otel collector
-                    bool excludeSeqEvent = message.RequestUri?.AbsolutePath.Equals("/api/events/raw") ?? false;
-                    if (excludeSeqEvent)
-                    {
-                        return false;
-                    }
+                        bool excludeAzureFunctionsEvent =
+                            msg.RequestUri?.AbsolutePath.Equals(
+                                "/AzureFunctionsRpcMessages.FunctionRpc/EventStream") ?? false;
+                        if (excludeAzureFunctionsEvent)
+                        {
+                            return false;
+                        }
 
-                    //do not send seq request to otel collector
-                    bool excludeLiveDiagnosticsEvent =
-                        message.RequestUri?.Host.Contains(".livediagnostics.monitor.azure.com") ?? false;
-                    if (excludeLiveDiagnosticsEvent)
-                    {
-                        return false;
-                    }
+                        if (msg.RequestUri?.Host.Equals("169.254.169.254") ?? false)
+                        {
+                            return false;
+                        }
 
-                    //do not send seq request to otel collector
-                    bool excludeApplicationInsightsEvent =
-                        message.RequestUri?.Host.Contains("applicationinsights.azure.com") ?? false;
-                    if (excludeApplicationInsightsEvent)
-                    {
-                        return false;
-                    }
-
-                    bool excludeAzureFunctionsEvent =
-                        message.RequestUri?.AbsolutePath.Equals("/AzureFunctionsRpcMessages.FunctionRpc/EventStream") ??
-                        false;
-                    if (excludeAzureFunctionsEvent)
-                    {
-                        return false;
-                    }
-
-                    bool excludeAzureFunctionsHostMeta = message.RequestUri?.Host.Equals("169.254.169.254") ?? false;
-                    if (excludeAzureFunctionsHostMeta)
-                    {
-                        return false;
-                    }
-
-                    return true;
-                };
+                        return true;
+                    });
             });
 
             configureTracerProviderBuilder?.Invoke(tracing);
