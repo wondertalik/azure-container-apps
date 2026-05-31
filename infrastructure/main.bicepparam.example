@@ -1,0 +1,41 @@
+using './main.bicep'
+
+param location = '<azure-region>'
+param projectName = '<project-name>'
+param targetEnvironment = '<env>'
+
+param azureContainerRegistryName = '<acr-name>'
+param azureContainerRegistryResourceGroupName = '<acr-resource-group-name>'
+param namePrefix = '01'
+param dailyQuotaGb = '-1'
+
+// HttpApi
+param enableHttpApiContainerAppImage = false
+param httpApiContainerAppName = '<container-app-name>'
+param httpApiContainerAppImage = '<acr-name>.azurecr.io/<image>:<tag>'
+param httpApiContainerAppScaleMinReplicas = 0
+param httpApiContainerAppScaleMaxReplicas = 3
+param httpApiContainerAppResourcesCpu = '0.5'
+param httpApiContainerAppResourcesMemory = '1Gi'
+param enableHttpApiContainerAppHealthProbes = false
+
+// FunctionApp1
+param enableFunctionApp1Image = false
+param functionApp1Image = '<acr-name>.azurecr.io/<function-image>:<tag>'
+param functionApp1MinimumElasticInstanceCount = 0
+param functionApp1ScaleLimit = 3
+param functionApp1ResourcesCpu = '0.5'
+param functionApp1ResourcesMemory = '1Gi'
+
+// CosmosDB
+param enableCosmosDb = false
+param cosmosDbAccountName = '<project>-<env>-cosmos'
+param cosmosDbServerless = true
+param cosmosDbEnableFreeTier = false
+
+// Users module
+param enableUsersModule = false
+param usersCosmosDbDatabaseName = 'users-db'
+param usersInitContainerImage = '<acr-name>.azurecr.io/users-init-container:<tag>'
+param usersInitTenantsSeed = false
+param usersInitUsersSeed = false

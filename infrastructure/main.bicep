@@ -1,12 +1,3 @@
-@maxLength(36)
-@minLength(36)
-@description('Azure SubscriptionId')
-param subscriptionId string
-
-@maxLength(30)
-@description('Name of resouce group')
-param applicationResourceGroupName string
-
 @description('Location of newly created resources')
 param location string
 
@@ -20,7 +11,7 @@ param targetEnvironment string
 @description('Azure Container Registry Name')
 param azureContainerRegistryName string
 
-@description('Azure Container Registry restore group name')
+@description('Azure Container Registry resource group name')
 param azureContainerRegistryResourceGroupName string
 
 // HttpApi
@@ -48,17 +39,25 @@ param httpApiContainerAppScaleMaxReplicas int = 3
 @description('Enable health probes for the container app')
 param enableHttpApiContainerAppHealthProbes bool = false
 
-// Users CosmosDB
-@description('CosmosDB account name for Users module')
-param usersCosmosDbAccountName string = ''
+// CosmosDB
+// CosmosDB
+@description('Enable CosmosDB account creation')
+param enableCosmosDb bool = false
 
+@description('CosmosDB account name')
+param cosmosDbAccountName string = ''
+
+@description('Use serverless capacity mode for CosmosDB')
+param cosmosDbServerless bool = true
+
+@description('Enable free tier for CosmosDB account (limit: 1 per subscription)')
+param cosmosDbEnableFreeTier bool = false
+
+// Users module
 @description('CosmosDB database name for Users module')
 param usersCosmosDbDatabaseName string = 'users-db'
 
-@description('Use serverless capacity mode for Users CosmosDB')
-param usersCosmosDbServerless bool = true
-
-@description('Enable CosmosDB and Users init container job')
+@description('Enable Users init container job')
 param enableUsersModule bool = false
 
 @description('Full image reference for Users.InitContainer job')
@@ -89,16 +88,11 @@ param functionApp1MinimumElasticInstanceCount int = 0
 @description('Maximum number of instances that the function app can scale out to')
 param functionApp1ScaleLimit int = 3
 
-targetScope = 'subscription'
+@description('Prefix for resource naming')
+param namePrefix string = '01'
 
-module applicationResourceGroup './modules/resource-group.bicep' = {
-  name: applicationResourceGroupName
-  params: {
-    location: location
-    resourceGroupName: applicationResourceGroupName
-  }
-  scope: subscription(subscriptionId)
-}
+@description('Daily quota in GB for Log Analytics workspace (-1 for unlimited)')
+param dailyQuotaGb string = '-1'
 
 module telemetry './modules/telemetry.bicep' = {
   name: 'telemetry'
@@ -106,9 +100,9 @@ module telemetry './modules/telemetry.bicep' = {
     location: location
     projectName: projectName
     targetEnvironment: targetEnvironment
-    namePrefix: '01'
+    namePrefix: namePrefix
+    dailyQuotaGb: dailyQuotaGb
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
 }
 
 module keyVault './modules/helpers/keyvault-helper.bicep' = {
@@ -117,9 +111,8 @@ module keyVault './modules/helpers/keyvault-helper.bicep' = {
     location: location
     projectName: projectName
     targetEnvironment: targetEnvironment
-    namePrefix: '01'
+    namePrefix: namePrefix
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
 }
 
 module userAssignIdentity './modules/helpers/user-assigned-identity.bicep' = {
@@ -128,9 +121,8 @@ module userAssignIdentity './modules/helpers/user-assigned-identity.bicep' = {
     location: location
     projectName: projectName
     targetEnvironment: targetEnvironment
-    namePrefix: '01'
+    namePrefix: namePrefix
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [keyVault]
 }
 
@@ -139,9 +131,9 @@ module azureContainerRegistry './modules/azure-container-registry.bicep' = {
   params: {
     azureContainerRegistryName: azureContainerRegistryName
     userAssignedIdentityName: userAssignIdentity.outputs.identityName
-    userIdentityResourceGroupName: applicationResourceGroup.name
+    userIdentityResourceGroupName: resourceGroup().name
   }
-  scope: az.resourceGroup(azureContainerRegistryResourceGroupName)
+  scope: resourceGroup(azureContainerRegistryResourceGroupName)
 }
 
 module applicationContainerAppsEnvironment './modules/azure-container-apps-environment.bicep' = {
@@ -152,9 +144,8 @@ module applicationContainerAppsEnvironment './modules/azure-container-apps-envir
     targetEnvironment: targetEnvironment
     logAnalyticsWorkspaceName: telemetry.outputs.logAnalyticsWorkspaceName
     applicationInsightsName: telemetry.outputs.applicationInsightsName
-    namePrefix: '01'
+    namePrefix: namePrefix
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
 }
 
 module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep' = if (enableFunctionApp1Image) {
@@ -176,7 +167,6 @@ module functionApp1 './modules/helpers/azure-function-container-app-helper.bicep
     minimumElasticInstanceCount: functionApp1MinimumElasticInstanceCount
     functionAppScaleLimit: functionApp1ScaleLimit
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
 }
 
 module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' = if (enableHttpApiContainerAppImage) {
@@ -191,43 +181,49 @@ module httpApiContainerApp './modules/helpers/azure-container-app-helper.bicep' 
     azureContainerRegistryName: azureContainerRegistryName
     containerAppName: httpApiContainerAppName
     containerAppImage: httpApiContainerAppImage
-    resourcesCpu: httpApiContainerAppResourcesCpu 
+    resourcesCpu: httpApiContainerAppResourcesCpu
     resourcesMemory: httpApiContainerAppResourcesMemory
     scaleMinReplicas: httpApiContainerAppScaleMinReplicas
     scaleMaxReplicas: httpApiContainerAppScaleMaxReplicas
     enableHealthProbes: enableHttpApiContainerAppHealthProbes
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
   dependsOn: [keyVault]
 }
 
-// Users module: CosmosDB account + database
-module usersCosmosDb './modules/cosmosdb.bicep' = if (enableUsersModule) {
-  name: 'usersCosmosDb'
+// CosmosDB account (shared infrastructure)
+module cosmosDbAccount './modules/cosmosdb-account.bicep' = if (enableCosmosDb) {
+  name: 'cosmosDbAccount'
   params: {
     location: location
     projectName: projectName
     targetEnvironment: targetEnvironment
-    cosmosDbAccountName: usersCosmosDbAccountName
-    cosmosDbDatabaseName: usersCosmosDbDatabaseName
-    serverless: usersCosmosDbServerless
+    cosmosDbAccountName: cosmosDbAccountName
+    serverless: cosmosDbServerless
+    enableFreeTier: cosmosDbEnableFreeTier
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
+}
+
+// Users module: database
+module usersCosmosDbDatabase './modules/helpers/cosmosdb-sql-database.bicep' = if (enableCosmosDb && enableUsersModule) {
+  name: 'usersCosmosDbDatabase'
+  params: {
+    cosmosDbAccountName: cosmosDbAccount!.outputs.cosmosDbAccountName
+    databaseName: usersCosmosDbDatabaseName
+    serverless: cosmosDbServerless
+  }
 }
 
 // Users module: grant Managed Identity Cosmos DB Built-in Data Contributor
-module usersCosmosDbRoleAssignment './modules/helpers/cosmosdb-role-assignment.bicep' = if (enableUsersModule) {
+module usersCosmosDbRoleAssignment './modules/helpers/cosmosdb-role-assignment.bicep' = if (enableCosmosDb && enableUsersModule) {
   name: 'usersCosmosDbRoleAssignment'
   params: {
-    cosmosDbAccountName: usersCosmosDb.outputs.cosmosDbAccountName
+    cosmosDbAccountName: cosmosDbAccount!.outputs.cosmosDbAccountName
     principalId: userAssignIdentity.outputs.identityPrincipalId
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [usersCosmosDb]
 }
 
 // Users module: InitContainer job (Manual trigger, run by pipeline)
-module usersInitContainerJob './modules/helpers/init-container-job.bicep' = if (enableUsersModule) {
+module usersInitContainerJob './modules/helpers/init-container-job.bicep' = if (enableCosmosDb && enableUsersModule) {
   name: 'usersInitContainerJob'
   params: {
     location: location
@@ -237,11 +233,10 @@ module usersInitContainerJob './modules/helpers/init-container-job.bicep' = if (
     userAssignedIdentityName: userAssignIdentity.outputs.identityName
     azureContainerRegistryName: azureContainerRegistryName
     initContainerImage: usersInitContainerImage
-    cosmosDbEndpoint: usersCosmosDb.outputs.cosmosDbEndpoint
+    cosmosDbEndpoint: cosmosDbAccount!.outputs.cosmosDbEndpoint
     cosmosDbDatabaseName: usersCosmosDbDatabaseName
     tenantsSeed: usersInitTenantsSeed
     usersSeed: usersInitUsersSeed
   }
-  scope: az.resourceGroup(applicationResourceGroup.name)
-  dependsOn: [usersCosmosDbRoleAssignment]
+  dependsOn: [usersCosmosDbDatabase, usersCosmosDbRoleAssignment]
 }

@@ -6,6 +6,15 @@ This guide provides instructions on how to execute Bicep configuration using the
 
 - Azure CLI installed. If not, follow the [installation guide](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli).
 - Bicep CLI installed. If not, follow the [installation guide](https://docs.microsoft.com/en-us/azure/azure-resource-manager/bicep/install).
+- A pre-existing resource group where resources will be deployed.
+
+## Setup
+
+1. Copy `main.bicepparam.example` to `main.bicepparam` and fill in your values:
+   ```sh
+   cp main.bicepparam.example main.bicepparam
+   ```
+   > Note: `main.bicepparam` is git-ignored and contains your actual deployment values.
 
 ## Steps to Execute Bicep Configuration
 
@@ -18,21 +27,22 @@ This guide provides instructions on how to execute Bicep configuration using the
     ```sh
     az account set --subscription <your-subscription-id>
     ```
-    
-3. **Preview the changes (optional but recommended):**
-    
+
+3. **Create the resource group (if it doesn't exist):**
     ```sh
-    az deployment sub what-if --resource-group <your-resource-group> --template-file <path-to-your-bicep-file> --parameters paramName=paramValue
+    az group create --name <your-resource-group> --location <location>
     ```
 
-    This command shows the changes that will be made by the deployment without actually applying them.
-
-4. **Deploy the Bicep file:**
+4. **Preview the changes (optional but recommended):**
+    
     ```sh
-    az deployment sub create --resource-group <your-resource-group> --template-file <path-to-your-bicep-file> --parameters paramName=paramValue
+    az deployment group what-if --resource-group <your-resource-group> --template-file ./main.bicep --parameters ./main.bicepparam
     ```
 
-    Replace `<your-resource-group>` with the name of your resource group and `<path-to-your-bicep-file>` with the path to your Bicep file.
+5. **Deploy the Bicep file:**
+    ```sh
+    az deployment group create --resource-group <your-resource-group> --template-file ./main.bicep --parameters ./main.bicepparam
+    ```
 
 ## Example
 
@@ -40,58 +50,18 @@ This guide provides instructions on how to execute Bicep configuration using the
 az login
 az account set --subscription 12345678-1234-1234-1234-123456789abc
 
-targetenv='dev'
-subscriptionId='12345678-1234-1234-1234-123456789abc'
-location='westeurope'
-projectName='learn'
+# Create RG if needed
+az group create --name rg-01-westeurope-learn-dev --location westeurope
 
-az deployment sub what-if --location $location \
+# Preview
+az deployment group what-if --resource-group rg-01-westeurope-learn-dev \
  --template-file ./main.bicep \
- --parameters \
-   subscriptionId=$subscriptionId \
-   applicationResourceGroupName="rg-01-${location}-${projectName}-${targetenv}" \
-   location=$location \
-   projectName=$projectName \
-   targetEnvironment=$targetenv \
-   azureContainerRegistryName='myexampleacrtst' \
-   azureContainerRegistryResourceGroupName='rg-my-example-acr' \
-   enableHttpApiContainerAppImage=true \
-   httpApiContainerAppName='my-httpapi' \
-   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
-   httpApiContainerAppScaleMinReplicas=0 \
-   httpApiContainerAppScaleMaxReplicas=1 \
-   httpApiContainerAppResourcesCpu=0.5 \
-   httpApiContainerAppResourcesMemory=1Gi \
-   enableFunctionApp1Image=true \
-   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release' \
-   functionApp1MinimumElasticInstanceCount=0 \
-   functionApp1ScaleLimit=1 \
-   functionApp1ResourcesCpu=0.5 \
-   functionApp1ResourcesMemory=1Gi
+ --parameters ./main.bicepparam
 
-az deployment sub create --location $location \
+# Deploy
+az deployment group create --resource-group rg-01-westeurope-learn-dev \
  --template-file ./main.bicep \
- --parameters \
-   subscriptionId=$subscriptionId \
-   applicationResourceGroupName="rg-01-${location}-${projectName}-${targetenv}" \
-   location=$location \
-   projectName=$projectName \
-   targetEnvironment=$targetenv \
-   azureContainerRegistryName='myexampleacrtst' \
-   azureContainerRegistryResourceGroupName='rg-my-example-acr' \
-   enableHttpApiContainerAppImage=true \
-   httpApiContainerAppName='my-httpapi' \
-   httpApiContainerAppImage='myexampleacrtst.azurecr.io/my-httpapi-tst:1.0.4-release' \
-   httpApiContainerAppScaleMinReplicas=0 \
-   httpApiContainerAppScaleMaxReplicas=1 \
-   httpApiContainerAppResourcesCpu=0.5 \
-   httpApiContainerAppResourcesMemory=1Gi \
-   enableFunctionApp1Image=true \
-   functionApp1Image='myexampleacrtst.azurecr.io/my-func-tst:2.0.10-release' \
-   functionApp1MinimumElasticInstanceCount=0 \
-   functionApp1ScaleLimit=1 \
-   functionApp1ResourcesCpu=0.5 \
-   functionApp1ResourcesMemory=1Gi
+ --parameters ./main.bicepparam
 ```
 
 ## Additional Resources

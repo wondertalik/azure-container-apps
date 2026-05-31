@@ -10,3 +10,4 @@ riderModule.iml
 AzureContainerApps.sln.DotSettings.user
 **/.DS_Store
 infrastructure/runs/
+infrastructure/main.bicepparam
