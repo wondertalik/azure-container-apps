@@ -63,9 +63,9 @@ docker buildx build --platform linux/amd64 --progress plain \
 2. Generate self-signed certificates into `/certs` directory and trust them
 3. Create `.env.dev` from the template documented in README.md
 4. Set `Users.InitContainer` secrets via .NET user secrets (section `Users:UsersInfrastructureCosmosDbOptions`):
-   - `ConnectionString` — CosmosDB connection string
-   - `Throughput` — autoscale RU/s (e.g. `400`)
-   - `UseIntegratedCache` — `false` for local dev (Direct mode); `true` enables Gateway/Integrated Cache
+    - `ConnectionString` — CosmosDB connection string
+    - `Throughput` — autoscale RU/s (e.g. `400`)
+    - `UseIntegratedCache` — `false` for local dev (Direct mode); `true` enables Gateway/Integrated Cache
 
 ## Architecture
 
@@ -82,20 +82,21 @@ docker buildx build --platform linux/amd64 --progress plain \
 
 ### Users Module
 
-Multi-tenant identity and RBAC management backed by Azure Cosmos DB NoSQL (`users-db`). Nine projects:
+Multi-tenant identity and RBAC management backed by Azure Cosmos DB NoSQL (`users-db`). Eight projects:
 
-| Project | Purpose |
-|---|---|
-| `Users.Authorization.Constants` | Action ID constants (`TenantActions`, `UserActions`, `AuthActions`), `Root` system constants, `UsersCosmosDbConstants` |
-| `Users.Shared` | `TenantType` enum |
-| `Users.Infrastructure.Entities` | CosmosDB document records (`DbUser`, `DbTenant`, `DbRole`, `DbAction`, `DbPermission`, `DbMigration`) |
-| `Users.Infrastructure.Contracts` | Provider-agnostic repository interfaces + `IUsersCosmosDbManagerRepository` |
-| `Users.Infrastructure.CosmosDb` | Repositories, options, migration service, DI wiring (`AddUsersCosmosDb`, `UseUsersCosmosDb`) |
-| `Users.Infrastructure.CosmosDb.Migrations` | Concrete migrations (`V20250501_202100_InitialSeed`), `AddUsersCosmosDbMigrations` |
-| `Users.InitContainer` | Console app — DB provisioning + migration + seed (runs as Container Apps Job) |
-| `Users.InitContainer.Data` | Seeders, `SeederOptions`, JSON seed files in `SeedData/users-db/` |
+| Project                                    | Purpose                                                                                                                |
+|--------------------------------------------|------------------------------------------------------------------------------------------------------------------------|
+| `Users.Authorization.Constants`            | Action ID constants (`TenantActions`, `UserActions`, `AuthActions`), `Root` system constants, `UsersCosmosDbConstants` |
+| `Users.Shared`                             | `TenantType` enum                                                                                                      |
+| `Users.Infrastructure.Entities`            | CosmosDB document records (`DbUser`, `DbTenant`, `DbRole`, `DbAction`, `DbPermission`, `DbMigration`)                  |
+| `Users.Infrastructure.Contracts`           | Provider-agnostic repository interfaces + `IUsersCosmosDbManagerRepository`                                            |
+| `Users.Infrastructure.CosmosDb`            | Repositories, options, migration service, DI wiring (`AddUsersCosmosDb`, `UseUsersCosmosDb`)                           |
+| `Users.Infrastructure.CosmosDb.Migrations` | Concrete migrations (`V20250501_202100_InitialSeed`), `AddUsersCosmosDbMigrations`                                     |
+| `Users.InitContainer`                      | Console app — DB provisioning + migration + seed (runs as Container Apps Job)                                          |
+| `Users.InitContainer.Data`                 | Seeders, `SeederOptions`, JSON seed files in `SeedData/users-db/`                                                      |
 
 **Key init sequence** (in `Users.InitContainer/Program.cs`):
+
 ```
 AddUsersCosmosDb() + AddUsersCosmosDbMigrations()
   → app.UseUsersCosmosDb()                         ← wires container config (sync)
@@ -104,11 +105,14 @@ AddUsersCosmosDb() + AddUsersCosmosDbMigrations()
   → TenantSeeder + UserSeeder                       ← seeds reference data
 ```
 
-**Config section**: `Users:UsersInfrastructureCosmosDbOptions` — requires `ConnectionString`, `DatabaseId`, `Throughput`, `UseIntegratedCache`. Set via .NET user secrets for local development.
+**Config section**: `Users:UsersInfrastructureCosmosDbOptions` — requires `ConnectionString`, `DatabaseId`, `Throughput`,
+`UseIntegratedCache`. Set via .NET user secrets for local development.
 
-**Local emulator**: Parallels Desktop CosmosDB emulator at `localhost:8081` (`IgnoreSslCertificateValidation: false`). Docker Linux emulator requires `IgnoreSslCertificateValidation: true`.
+**Local emulator**: Parallels Desktop CosmosDB emulator at `localhost:8081` (`IgnoreSslCertificateValidation: false`). Docker
+Linux emulator requires `IgnoreSslCertificateValidation: true`.
 
-**Slash commands** for development tasks: `/scaffold-cosmos-repository`, `/run-users-init-container`, `/add-seed-data`, `/check-cosmos-container`.
+**Slash commands** for development tasks: `/scaffold-cosmos-repository`, `/run-users-init-container`, `/add-seed-data`,
+`/check-cosmos-container`.
 
 ### Observability Pipeline
 
@@ -133,7 +137,23 @@ Bicep templates in `/infrastructure/` deploy to Azure Container Apps environment
 | OTLP gRPC        | 4317  |
 | OTLP HTTP        | 4318  |
 
-### Versioning & Releases
+## Skills
+
+All project skills live in `.agents/skills/` (canonical). `.github/skills/` and `.claude/skills/` contain symlinks pointing
+there — the same SKILL.md is read by Copilot, Claude Code, Cursor, Cline, Gemini CLI, and 10+ other tools with no duplication.
+
+| Skill                           | When to use                                                    |
+|---------------------------------|----------------------------------------------------------------|
+| `dotnet-sdk-runtime-updater`    | Bumping .NET SDK and ASP.NET Core runtime versions across Dockerfiles and global.json |
+| `azure-functions-image-updater` | Bumping Azure Functions base image versions across Dockerfiles |
+
+**Adding a new external skill** (`npx skills add <org>/<kit>` auto-creates `.agents/` + `.claude/` symlink):
+
+```bash
+ln -s ../../.agents/skills/<skill-name> .github/skills/<skill-name>
+```
+
+## Versioning & Releases
 
 Automated via `release-please` (`.github/workflows/release-please.yml`). Version is tracked in `version.txt` and
 `.release-please-manifest.json`. Changelog sections are defined in `.release-please-config.json`.

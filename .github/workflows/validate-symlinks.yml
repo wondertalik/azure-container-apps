@@ -1,0 +1,30 @@
+name: Validate symlinks
+
+on:
+  pull_request:
+    paths:
+      - '.agents/skills/**'
+      - '.claude/skills/**'
+      - '.github/skills/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check skill symlinks resolve
+        run: |
+          broken=0
+          for link in .claude/skills/* .github/skills/*; do
+            [ -L "$link" ] || continue
+            if [ ! -e "$link" ]; then
+              echo "Dangling symlink: $link -> $(readlink "$link")"
+              broken=$((broken + 1))
+            fi
+          done
+          if [ $broken -gt 0 ]; then
+            echo "::error::$broken dangling symlink(s) found. Run 'ln -s ../../.agents/skills/<name> .github/skills/<name>' with the correct relative path."
+            exit 1
+          fi
+          echo "All skill symlinks resolve correctly."
