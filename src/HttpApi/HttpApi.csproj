@@ -9,9 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Sentry.AspNetCore" Version="6.6.0" />
-    <PackageReference Include="Sentry.OpenTelemetry" Version="6.6.0" />
-    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.0" />
+    <PackageReference Include="Sentry.AspNetCore" />
+    <PackageReference Include="Sentry.OpenTelemetry" />
+    <PackageReference Include="Swashbuckle.AspNetCore" />
   </ItemGroup>
 
   <ItemGroup>

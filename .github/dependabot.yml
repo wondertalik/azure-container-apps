@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 10
+    groups:
+      microsoft-extensions:
+        patterns:
+          - "Microsoft.Extensions.*"
+      opentelemetry:
+        patterns:
+          - "OpenTelemetry.*"
+      sentry:
+        patterns:
+          - "Sentry.*"
+      azure-functions:
+        patterns:
+          - "Microsoft.Azure.Functions.*"
