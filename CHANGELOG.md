@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.3.0](https://github.com/wondertalik/azure-container-apps/compare/v1.2.0...v1.3.0) (2026-06-05)
+
+
+### Features
+
+* add CosmosDB skill configuration and template files for best practices ([#23](https://github.com/wondertalik/azure-container-apps/issues/23)) ([a2d2178](https://github.com/wondertalik/azure-container-apps/commit/a2d217888501fbf0ca6169f7b6395df676f8a097))
+* configure TLS for Aspire Dashboard and update environment variables ([#19](https://github.com/wondertalik/azure-container-apps/issues/19)) ([0ae0eb8](https://github.com/wondertalik/azure-container-apps/commit/0ae0eb85a1243f4b2253962fcf7e055b4d7245c7))
+* implement console telemetry scope and HTTP request message filter for OpenTelemetry ([#21](https://github.com/wondertalik/azure-container-apps/issues/21)) ([506561f](https://github.com/wondertalik/azure-container-apps/commit/506561f251a8c659e98a3087de134c9b37e15648))
+
+
+### Code Refactoring
+
+* reorganize skills and add symlink validation workflow ([#22](https://github.com/wondertalik/azure-container-apps/issues/22)) ([2f49ae7](https://github.com/wondertalik/azure-container-apps/commit/2f49ae79e23fcddbb98ccdac16e6d786d303b664))
+
+
+### Dependencies
+
+* add Dependabot configuration for package updates and centralize package version management ([#24](https://github.com/wondertalik/azure-container-apps/issues/24)) ([5030474](https://github.com/wondertalik/azure-container-apps/commit/50304746d4cd8654d8597de9fef9610b49b144db))
+
 ## [1.2.0](https://github.com/wondertalik/azure-container-apps/compare/v1.1.2...v1.2.0) (2026-05-31)
 
 
