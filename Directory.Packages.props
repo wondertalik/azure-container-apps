@@ -6,7 +6,7 @@
     <!-- Azure -->
     <PackageVersion Include="Azure.Identity" Version="1.21.0" />
     <PackageVersion Include="Azure.Monitor.OpenTelemetry.AspNetCore" Version="1.5.0" />
-    <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.61.0" />
+    <PackageVersion Include="Microsoft.Azure.Cosmos" Version="3.62.1" />
     <!-- Azure Functions -->
     <PackageVersion Include="Microsoft.ApplicationInsights.WorkerService" Version="3.1.2" />
     <PackageVersion Include="Microsoft.Azure.Functions.Worker" Version="2.52.0" />
